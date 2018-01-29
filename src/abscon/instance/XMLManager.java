@@ -41,7 +41,7 @@ public class XMLManager {
 		private MessageFormat message = new MessageFormat("({0}: {1}, {2}): {3}");
 
 		private void print(SAXParseException x) {
-			String msg = message.format(new Object[] { x.getSystemId(), new Integer(x.getLineNumber()), new Integer(x.getColumnNumber()), x.getMessage() });
+			String msg = message.format(new Object[] { x.getSystemId(), x.getLineNumber(), x.getColumnNumber(), x.getMessage() });
 			System.out.println(msg);
 		}
 

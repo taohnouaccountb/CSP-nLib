@@ -181,7 +181,7 @@ public class Toolkit {
 	public static Integer parseInteger(String token) {
 		try {
 			int l = Integer.parseInt(token);
-			return new Integer(l);
+			return l;
 		} catch (NumberFormatException e) {
 			return null;
 		}
@@ -190,7 +190,7 @@ public class Toolkit {
 	public static Long parseLong(String token) {
 		try {
 			long l = Long.parseLong(token);
-			return new Long(l);
+			return l;
 		} catch (NumberFormatException e) {
 			return null;
 		}
