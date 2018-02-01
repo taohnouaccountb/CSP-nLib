@@ -9,9 +9,11 @@ package csp;
 
 import abscon.instance.tools.InstanceParser;
 import csp.data.*;
-import csp.tool.sortPrint;
+import csp.io.sortPrint;
+import csp.tool.Solver;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 
@@ -52,6 +54,11 @@ public class MyParser {
                 e.printStackTrace();
             }
         }
+//        printParser(parser);
+        problem=new Problem(parser.getName(),variables,constraints);
+    }
+
+    private void printParser(InstanceParser parser){
         sortPrint sp=new sortPrint();
         System.out.println("Instance name: "+parser.getName());
 
@@ -69,11 +76,39 @@ public class MyParser {
 
     public static void main(String[] args) {
 // Hardcoded now... but should read in the file through the arguments, -f <XML-NAME>
-        MyParser parser;
-        if (args.length == 2 && args[0].equals("-f")) {
-            parser = new MyParser(args[1]);
-        } else {
-            parser = new MyParser("./data.xml");
+        MyParser parser = null;
+
+        boolean validArg=false;
+        for(int i=0;i<args.length;i++){
+            if(args[i].equals("-f")){
+                validArg=true;
+                if(parser!=null){
+                    System.out.println("ERROR: Multiple '-f' detected.");
+                    break;
+                }
+                parser = new MyParser(args[i+1]);
+            }
+            else if(args[i].equals("-a")){
+                validArg=true;
+                if(parser==null){
+                    System.out.println("ERROR: '-f' should be the first argument.");
+                    break;
+                }
+                if(args[i+1].equals("ac1")){
+                    Solver solve=new Solver();
+                    solve.init(problem);
+                    solve.NC();
+                    solve.AC1();
+                }
+            }
         }
+        if(!validArg){
+            parser = new MyParser("./data.xml");
+            Solver solver=new Solver();
+            solver.init(problem);
+            solver.NC();
+            solver.AC1();
+        }
+
     }
 }

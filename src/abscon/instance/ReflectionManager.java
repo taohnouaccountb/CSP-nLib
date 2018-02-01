@@ -229,7 +229,7 @@ public class ReflectionManager {
 	}
 
 	public static DigestedFields getAllFieldsOfFieldOfInheritingFrom(Object object, Class targetClass) {
-		// Class problemClass = solver.getProblem().getClass();
+		// Class problemClass = Solver.getProblem().getClass();
 		Class innerClass = ReflectionManager.getFirstInnerClassOfInheritingFrom(object.getClass(), targetClass);
 		Field field = ReflectionManager.getFirstFieldOfWithType(object.getClass(), targetClass);
 		try {
