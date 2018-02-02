@@ -21,6 +21,7 @@ public class MyParser {
     static private List<Variable> variables;
     static public Constraint constraints;
     static public Problem problem;
+    static public String file_name;
 
     public MyParser(String filename) {
         InstanceParser parser = new InstanceParser();
@@ -86,6 +87,7 @@ public class MyParser {
                     System.out.println("ERROR: Multiple '-f' detected.");
                     break;
                 }
+                file_name=args[i+1].substring(args[i+1].lastIndexOf("\\")+1,args[i+1].length()-5);
                 parser = new MyParser(args[i+1]);
             }
             else if(args[i].equals("-a")){
@@ -104,6 +106,7 @@ public class MyParser {
         }
         if(!validArg){
             parser = new MyParser("./data.xml");
+            file_name="data";
             Solver solver=new Solver();
             solver.init(problem);
             solver.NC();
