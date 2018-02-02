@@ -6,3 +6,8 @@ runProgram.sh
 Makefile
 out/
 idea_prj.iml
+csp.jar
+project.properties
+project.zip
+*.csv
+pdf/
