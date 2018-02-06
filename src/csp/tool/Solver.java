@@ -161,27 +161,32 @@ public class Solver {
         return !flag.isPresent();
     }
 
-    private Map<simpleVariable, Map<simpleVariable, Map<Integer, Stack<Integer> > > > ac2001Track=null;
+    private Map<simpleVariable, Map<simpleVariable, Map<Integer, Integer > > > ac2001Track=null;
     private boolean ac2001_enable=false;
     public boolean support(final simpleVariable a, final int va, final simpleVariable b) {
-        if(ac2001_enable==true){
-            Map<Integer, Stack<Integer>> pair_ab = ac2001Track.get(a).get(b);
-            Stack<Integer> cur_stack = pair_ab.get(va);
-            if(cur_stack==null) {
-                pair_ab.put(va,new Stack<>());
-                Stack<Integer> finalCur_stack = pair_ab.get(va);
-                b.getCurrent_domain().stream().filter(i -> check(a, va, b, i)).forEach(i-> finalCur_stack.add(i));
-                return !finalCur_stack.empty();
+        if(ac2001_enable){
+            Map<Integer, Integer> pair_ab = ac2001Track.get(a).get(b);
+            if(pair_ab.get(va)!=null){
+                int vb=pair_ab.get(va);
+                if(vb==-1){
+                    return false;
+                }
+                else if(b.getCurrent_domain().parallelStream().anyMatch(i->i==vb)){
+                    return true;
+                }
+            }
+
+            Optional<Integer> x = b.getCurrent_domain().stream().filter(i -> check(a, va, b, i)).findAny();
+            if(x.isPresent()){
+                pair_ab.put(va,x.get());
             }
             else{
-                cur_stack=pair_ab.get(va);
-                while(!cur_stack.empty()&&!b.getCurrent_domain().contains(cur_stack.peek())){
-                    cur_stack.pop();
-                }
-                return !cur_stack.empty();
+                pair_ab.put(va,-1);
             }
+
+            return pair_ab.get(va)!=-1;
         }
-        return b.getCurrent_domain().stream().map(i -> check(a, va, b, i)).filter(i -> i == true).findAny().isPresent();
+        return b.getCurrent_domain().stream().anyMatch(i -> check(a, va, b, i));
     }
 
     public boolean revise(final simpleVariable a, final simpleVariable b) throws NoSolutionException {
@@ -204,7 +209,7 @@ public class Solver {
 
     private Queue<solverSimpleVarPair> getInitQueue_queue() {
         Queue<solverSimpleVarPair> q = new ConcurrentLinkedQueue<>();
-        getInitQueue_stream().forEach(i -> q.offer(i));
+        getInitQueue_stream().forEach(q::offer);
         return q;
     }
 
