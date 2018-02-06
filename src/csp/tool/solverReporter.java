@@ -1,96 +1,29 @@
 package csp.tool;
 
-import com.opencsv.bean.CsvBindByName;
-import com.opencsv.bean.CsvBindByPosition;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
+
+import static java.lang.String.format;
+
 
 public class solverReporter {
-    @CsvBindByPosition(position = 0)
-    public String name;
 
-    @CsvBindByPosition(position = 1)
-    public String cc;
+    private String name;
 
-    @CsvBindByPosition(position = 2)
-    public String cpu;
+    private String cc;
 
-    @CsvBindByPosition(position = 3)
-    public String fval;
+    private String cpu;
 
-    @CsvBindByPosition(position = 4)
-    public String iSize;
+    private String fval;
 
-    @CsvBindByPosition(position = 5)
-    public String fSize;
+    private String iSize;
 
-    @CsvBindByPosition(position = 6)
-    public String fEffect;
+    private String fSize;
 
-    @CsvBindByPosition(position = 7)
-    public String file_name;
+    private String fEffect;
 
-    public String getFile_name() {
-        return file_name;
-    }
-
-    public void setFile_name(String file_name) {
-        this.file_name = file_name;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getCc() {
-        return cc;
-    }
-
-    public void setCc(String cc) {
-        this.cc = cc;
-    }
-
-    public String getCpu() {
-        return cpu;
-    }
-
-    public void setCpu(String cpu) {
-        this.cpu = cpu;
-    }
-
-    public String getFval() {
-        return fval;
-    }
-
-    public void setFval(String fval) {
-        this.fval = fval;
-    }
-
-    public String getiSize() {
-        return iSize;
-    }
-
-    public void setiSize(String iSize) {
-        this.iSize = iSize;
-    }
-
-    public String getfSize() {
-        return fSize;
-    }
-
-    public void setfSize(String fSize) {
-        this.fSize = fSize;
-    }
-
-    public String getfEffect() {
-        return fEffect;
-    }
-
-    public void setfEffect(String fEffect) {
-        this.fEffect = fEffect;
-    }
+    private String file_name;
 
     public solverReporter(String file_name,String name, int cc, long cpu, long fval, double iSize, double fSize, double fEffect) {
         this.file_name=file_name;
@@ -101,5 +34,48 @@ public class solverReporter {
         this.iSize = String.valueOf(iSize);
         this.fSize = String.valueOf(fSize);
         this.fEffect = String.valueOf(fEffect);
+    }
+
+    public void writeToFile(String addr){
+        try {
+            Writer writer = new FileWriter(addr,true);
+            writer.write(name+","+cc+","+cpu+","+fval+","+iSize+","+fSize+","+fEffect+","+file_name+"\n");
+            writer.close();
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public String toString(){
+        String ret="";
+        ret+=("cc: " + cc);
+        ret+="\n";
+        ret+=("cpu: " + cpu + "ms");
+        ret+="\n";
+        if(Double.valueOf(fSize)!=-1.0){
+            ret+=("fval: " + fval);
+            ret+="\n";
+            ret+=format("iSize: %.5f",Double.valueOf(iSize));
+            ret+="\n";
+            ret+=format("fSize: %.5f",Double.valueOf(fSize));
+            ret+="\n";
+            ret+=format("fEffect: %.5f", Double.valueOf(fEffect));
+        }
+        else{
+            ret+=("fval: " + fval+" (before discovering domain wipeout)");
+            ret+="\n";
+            ret+=format("iSize: %.5f",Double.valueOf(iSize));
+            ret+="\n";
+            ret+="fSize: false";
+            ret+="\n";
+            ret+="fEffect: false";
+        }
+        return ret;
     }
 }

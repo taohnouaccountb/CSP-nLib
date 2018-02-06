@@ -11,9 +11,9 @@ import abscon.instance.tools.InstanceParser;
 import csp.data.*;
 import csp.io.sortPrint;
 import csp.tool.Solver;
+import csp.tool.solverReporter;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 
@@ -75,11 +75,13 @@ public class MyParser {
         System.out.println(sp.toString(1));
     }
 
+
     public static void main(String[] args) {
 // Hardcoded now... but should read in the file through the arguments, -f <XML-NAME>
         MyParser parser = null;
 
         boolean validArg=false;
+        boolean needWrite=false;
         for(int i=0;i<args.length;i++){
             if(args[i].equals("-f")){
                 validArg=true;
@@ -96,21 +98,42 @@ public class MyParser {
                     System.out.println("ERROR: '-f' should be the first argument.");
                     break;
                 }
+
+                //Preprocess
+                Solver S=new Solver();
+                S.init(problem);
+                S.solve(Solver.SOLUTIONS.NC);
+
+                //Solve
+                solverReporter result=null;
                 if(args[i+1].equals("ac1")){
-                    Solver solve=new Solver();
-                    solve.init(problem);
-                    solve.NC();
-                    solve.AC1();
+                    result=S.solve(Solver.SOLUTIONS.AC1);
                 }
+                else if(args[i+1].equals("ac3")){
+                    result=S.solve(Solver.SOLUTIONS.AC3);
+                }
+                else if(args[i+1].equals("ac2001")){
+                    result=S.solve(Solver.SOLUTIONS.AC2001);
+                }
+
+                //Output
+                System.out.println(result);
+                if(needWrite) result.writeToFile("solver_output.csv");
+            }
+            else if(args[i].equals("-r")){
+                needWrite=true;
             }
         }
         if(!validArg){
+            //Default
             parser = new MyParser("./data.xml");
             file_name="data";
-            Solver solver=new Solver();
-            solver.init(problem);
-            solver.NC();
-            solver.AC1();
+            Solver S=new Solver();
+            S.init(problem);
+            S.solve(Solver.SOLUTIONS.NC);
+            solverReporter result=S.solve(Solver.SOLUTIONS.AC2001);
+            result.writeToFile("solver_output.csv");
+            System.out.println(result);
         }
 
     }

@@ -1,32 +1,25 @@
 package csp.tool;
 
-/*import com.opencsv.CSVWriter;
-import com.opencsv.bean.StatefulBeanToCsv;
-import com.opencsv.bean.StatefulBeanToCsvBuilder;
-import com.opencsv.exceptions.CsvDataTypeMismatchException;
-import com.opencsv.exceptions.CsvRequiredFieldEmptyException;*/
-import com.opencsv.CSVWriter;
-import com.opencsv.bean.StatefulBeanToCsv;
-import com.opencsv.bean.StatefulBeanToCsvBuilder;
-import com.opencsv.exceptions.CsvDataTypeMismatchException;
-import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
 import csp.MyParser;
 import csp.data.Constraint;
+import csp.data.Variable;
 import csp.data.simpleVariable;
+import org.apache.commons.lang3.ObjectUtils;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Writer;
-import java.lang.reflect.Array;
+
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.stream.Stream.of;
 
 public class Solver {
     private csp.data.Problem problem = null;
     private int time_setup = -1;
     private int time_working = -1;
     private int check_counts = 0; //cc
-    private long cpu_time=0;
+    private long cpu_time = 0;
     private int remove_counts = 0; //fval
 
     private Boolean finishedFlag = false;
@@ -71,27 +64,25 @@ public class Solver {
     }
 
     public double filterEffect() {
-        double ans= variables.parallelStream().map(i->(double)(i.getCurrent_domain().size())/i.getRefVar().getInitial_domain().length)
-                .reduce((i,j)->i*j).get();
-        return 1-ans;
+        double ans = variables.parallelStream().map(i -> (double) (i.getCurrent_domain().size()) / i.getRefVar().getInitial_domain().length)
+                .reduce((i, j) -> i * j).get();
+        return 1 - ans;
     }
 
-    private List<simpleVariable> variables;
-    private List<Constraint> constraints;
+    private List<simpleVariable> variables = null;
+    private List<Constraint> constraints = null;
+    private Map<Variable, simpleVariable> findSimpleVariable = null;
 
     public void init(csp.data.Problem problem) {
         this.problem = problem;
-        long startTime = System.currentTimeMillis();
+        long startTime = System.nanoTime();
 
+        findSimpleVariable = new HashMap<>();
         variables = new ArrayList<simpleVariable>();
-        /*threadFactory.submit(()->{
-           problem.variables.forEach(i-> {
-               variables.add(new simpleVariable(i));
-//               System.out.println("VARIABLE "+i.getName());
-           });
-        });*/
         problem.variables.forEach(i -> {
-            variables.add(new simpleVariable(i));
+            simpleVariable n = new simpleVariable(i);
+            variables.add(n);
+            findSimpleVariable.put(i, n);
         });
 
         constraints = new ArrayList<Constraint>();
@@ -103,7 +94,7 @@ public class Solver {
 //        System.out.println("VAR_SIZE: "+variables.size());
 //        System.out.println("CST_SIZE: "+constraints.size());
 
-        long endTime = System.currentTimeMillis();
+        long endTime = System.nanoTime();
 //        System.out.println("INIT_TIME: " + (endTime - startTime)+"ms");
         getInitial_size();
 
@@ -130,14 +121,14 @@ public class Solver {
         check_counts++;
         Optional<Boolean> flag = constraints.stream().filter(i -> i.getArity() == 2).map((i) -> {
             simpleVariable x = a, y = b;
-            int vva=va,vvb=vb;
+            int vva = va, vvb = vb;
             if (i.scope[1].getName().equals(x.getName()) && i.scope[0].getName().equals(y.getName())) {
                 simpleVariable c = x;
                 x = y;
                 y = c;
-                int t=vva;
-                vva=vvb;
-                vvb=t;
+                int t = vva;
+                vva = vvb;
+                vvb = t;
 
             }
             if (i.scope[0].getName().equals(x.getName()) && i.scope[1].getName().equals(y.getName())) {
@@ -170,7 +161,26 @@ public class Solver {
         return !flag.isPresent();
     }
 
+    private Map<simpleVariable, Map<simpleVariable, Map<Integer, Stack<Integer> > > > ac2001Track=null;
+    private boolean ac2001_enable=false;
     public boolean support(final simpleVariable a, final int va, final simpleVariable b) {
+        if(ac2001_enable==true){
+            Map<Integer, Stack<Integer>> pair_ab = ac2001Track.get(a).get(b);
+            Stack<Integer> cur_stack = pair_ab.get(va);
+            if(cur_stack==null) {
+                pair_ab.put(va,new Stack<>());
+                Stack<Integer> finalCur_stack = pair_ab.get(va);
+                b.getCurrent_domain().stream().filter(i -> check(a, va, b, i)).forEach(i-> finalCur_stack.add(i));
+                return !finalCur_stack.empty();
+            }
+            else{
+                cur_stack=pair_ab.get(va);
+                while(!cur_stack.empty()&&!b.getCurrent_domain().contains(cur_stack.peek())){
+                    cur_stack.pop();
+                }
+                return !cur_stack.empty();
+            }
+        }
         return b.getCurrent_domain().stream().map(i -> check(a, va, b, i)).filter(i -> i == true).findAny().isPresent();
     }
 
@@ -180,117 +190,110 @@ public class Solver {
         return cut_counts > 0;
     }
 
-    public void AC1() {
-        ArrayList<simpleVariable> q1=new ArrayList<simpleVariable>();
-        ArrayList<simpleVariable> q2=new ArrayList<simpleVariable>();
 
-        constraints.forEach(i->{
-            if(i.getArity()!=2) return;
-            simpleVariable a=variables.stream()
-                    .filter(j->j.getName().equals(i.scope[0].getName()))
-                    .findAny().get();
-            simpleVariable b=variables.stream().filter(j->j.getName().equals(i.scope[1].getName())).findAny().get();
-            q1.add(a);
-            q2.add(b);
-            q1.add(b);
-            q2.add(a);
-        });
-
-        long startTime = System.currentTimeMillis();
-        try {
-            if (problem == null) {
-                return;
-            }
-            boolean revised = true;
-
-            while (revised) {
-                revised = false;
-                for(int k=0;k<q1.size();k++){
-                    simpleVariable i=q1.get(k);
-                    simpleVariable j=q2.get(k);
-                    boolean x = revise(i, j);
-                    revised = x || revised;
-                }
-            }
-            finishedFlag = true;
-            cpu_time=(System.currentTimeMillis() - startTime);
-            System.out.println("Instance name: " + problem.name);
-            System.out.println("cc: " + check_counts);
-            System.out.println("cpu: " + cpu_time + "ms");
-            System.out.println("fval: " + remove_counts);
-            System.out.format("iSize: %.5f\n",getInitial_size());
-            System.out.format("fSize: %.5f\n",getFiltered_size());
-            System.out.println("fEffect: " + filterEffect());
-
-        } catch (NoSolutionException e) {
-            System.out.println("Instance name: " + problem.name);
-            System.out.println("cc: " + check_counts);
-            System.out.println("cpu: " + (System.currentTimeMillis() - startTime) + " ms");
-            System.out.println("fval: " + remove_counts +" (before discovering domain wipeout)");
-            System.out.format("iSize: %.5f\n",getInitial_size());
-            System.out.println("fSize: " + "false");
-            System.out.println("fEffect: " + "false");
-            try {
-                Writer writer = new FileWriter("solver_output.csv",true);
-                StatefulBeanToCsv beanToCsv = new StatefulBeanToCsvBuilder(writer)
-                        .withQuotechar(CSVWriter.NO_QUOTE_CHARACTER)
-                        .build();
-                solverReporter rpt = new solverReporter(MyParser.file_name,problem.name, check_counts, cpu_time, remove_counts, getInitial_size(), -1, -1);
-
-                beanToCsv.write(rpt);
-                writer.close();
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException ee) {
-                    ee.printStackTrace();
-                }
-            } catch (CsvDataTypeMismatchException ee) {
-                ee.printStackTrace();
-            } catch (CsvRequiredFieldEmptyException ee) {
-                ee.printStackTrace();
-            } catch (IOException ee) {
-                ee.printStackTrace();
-            }
-            return ;
-        }
-        try {
-            Writer writer = new FileWriter("solver_output.csv",true);
-            StatefulBeanToCsv beanToCsv = new StatefulBeanToCsvBuilder(writer)
-                    .withQuotechar(CSVWriter.NO_QUOTE_CHARACTER)
-                    .build();
-            solverReporter rpt = new solverReporter(MyParser.file_name,problem.name, check_counts, cpu_time, remove_counts, getInitial_size(), getFiltered_size(), filterEffect());
-
-            beanToCsv.write(rpt);
-            writer.close();
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        } catch (CsvDataTypeMismatchException e) {
-            e.printStackTrace();
-        } catch (CsvRequiredFieldEmptyException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
+    private Stream<solverSimpleVarPair> getInitQueue_stream() {
+        //TODO Add distinct
+        return constraints.parallelStream().filter(i -> i.getArity() == 2)
+                .flatMap((i) -> {
+                    //Double the pairs
+                    simpleVariable a = findSimpleVariable.get(i.scope[0]);
+                    simpleVariable b = findSimpleVariable.get(i.scope[1]);
+                    return Stream.of(new solverSimpleVarPair(a, b), new solverSimpleVarPair(b, a));
+                }).distinct();
     }
 
-    public void NC() {
+    private Queue<solverSimpleVarPair> getInitQueue_queue() {
+        Queue<solverSimpleVarPair> q = new ConcurrentLinkedQueue<>();
+        getInitQueue_stream().forEach(i -> q.offer(i));
+        return q;
+    }
 
-        if (problem == null) {
-            System.out.println("ERROR: NOT INITIALIZED");
-            return;
-        }
-        variables.stream().forEach((i) -> {
-            List<Boolean> rst_flag = i.getCurrent_domain().stream().map(j -> check(i, j)).collect(Collectors.toList());
-            try {
-                cutDomainByList(i.getCurrent_domain(), rst_flag);
-            } catch (NoSolutionException e) {
-                System.out.println("NO SOLUTION");
+    private List<solverSimpleVarPair> getInitQueue_list() {
+        return getInitQueue_stream().collect(Collectors.toList());
+    }
+
+    public enum SOLUTIONS {AC1, AC3, NC, AC2001}
+
+    public solverReporter solve(SOLUTIONS x){
+        remove_counts = 0;
+        long startTime = System.nanoTime();
+
+        try {
+            if (problem == null) {
+                System.out.println("ERROR: Problem Uninitialized");
+                throw new NoSolutionException();
             }
-        });
+            if (x == SOLUTIONS.AC1) {
+                AC1();
+            } else if (x == SOLUTIONS.AC3) {
+                AC3();
+            } else if (x == SOLUTIONS.NC) {
+                NC();
+            } else if (x==SOLUTIONS.AC2001){
+                AC2001();
+            }
+            else {
+                System.out.println("ERROR: Solution not exist");
+            }
+            finishedFlag=true;
+            long cpu_time=(System.nanoTime() - startTime) / 1000000;
+            return new solverReporter(MyParser.file_name, problem.name, check_counts, cpu_time, remove_counts,
+                    getInitial_size(), getFiltered_size(), filterEffect());
+        } catch (NoSolutionException e) {
+            return new solverReporter(MyParser.file_name, problem.name, check_counts, cpu_time, remove_counts,
+                    getInitial_size(), -1, -1);
+        }
+    }
+
+    private void AC3() throws NoSolutionException{
+        Queue<solverSimpleVarPair> q = getInitQueue_queue();
+        while (q.size() != 0) {
+            boolean isRevised = false;
+            solverSimpleVarPair i = q.poll();
+            isRevised = revise(i.getA(), i.getB());
+            if (isRevised) {
+                i.getA().getRefVar().constraints.parallelStream()
+                        .filter(j -> j.getArity() == 2)
+                        .flatMap(j -> Arrays.stream(j.scope))
+                        .filter(j -> !j.getName().equals(i.getA().getName())&&!j.getName().equals(i.getB().getName()))
+                        .map(j -> findSimpleVariable.get(j))
+                        .distinct()
+                        .forEach((j) -> {
+                            q.offer(new solverSimpleVarPair(j,i.getA()));
+                        });
+            }
+        }
+    }
+    private void AC2001() throws NoSolutionException{
+        List<solverSimpleVarPair> l = getInitQueue_list();
+        ac2001Track=new HashMap<>();
+        for(solverSimpleVarPair i:l){
+            ac2001Track.putIfAbsent(i.getA(), new HashMap<>());
+            ac2001Track.get(i.getA()).putIfAbsent(i.getB(),new HashMap<>());
+        }
+
+        ac2001_enable=true;
+        AC3();
+        ac2001_enable=false;
+
+    }
+    private void AC1() throws NoSolutionException {
+        List<solverSimpleVarPair> q = getInitQueue_list();
+        boolean revised = true;
+        while (revised) {
+            revised = false;
+            for (int k = 0; k < q.size(); k++) {
+                solverSimpleVarPair i = q.get(k);
+                boolean x = revise(i.getA(), i.getB());
+                revised = x || revised;
+            }
+        }
+    }
+    private void NC() throws NoSolutionException{
+        for(simpleVariable i:variables){
+            List<Boolean> rst_flag = i.getCurrent_domain().stream().map(j -> check(i, j)).collect(Collectors.toList());
+            cutDomainByList(i.getCurrent_domain(), rst_flag);
+        }
     }
 
 }

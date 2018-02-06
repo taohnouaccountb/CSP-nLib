@@ -1,10 +1,10 @@
 import abscon.instance.intension.EvaluationManager;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.lang.reflect.Array;
+import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Main {
 
@@ -12,7 +12,22 @@ public class Main {
         System.out.println(false||true);
 //        String[] expr={"X1","X0","ne"};
         int[] tuple={1,2};
-        System.out.println(tuple[5]);
+        int[][] tuples={{1,2},{3,4}};
+        List<Integer> list=new ArrayList<Integer>();
+        list.add(1);
+        list.add(2);
+        System.out.println(list.contains(2));
+//        Arrays.stream(tuples).flatMapToInt(i->Arrays.stream(i)).forEach(System.out::println);
+//
+//        String[][] data = new String[][]{{"a", "b"}, {"c", "d"}, {"e", "f"}};
+//
+//        //Stream<String[]>
+//        Stream<String[]> temp = Arrays.stream(data);
+//
+//        //Stream<String>, GOOD!
+//        Stream<String> stringStream = temp.flatMap(x -> Arrays.stream(x));
+//
+//        stringStream.forEach(System.out::println);
 //        EvaluationManager evaluationManager = new EvaluationManager(expr);
 //        long result = evaluationManager.evaluate(tuple);
 //        System.out.println(result);
