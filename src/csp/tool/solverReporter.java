@@ -1,3 +1,10 @@
+/*
+ * CSCE421 2018Spr
+ * Tao Yao
+ * 09157432
+ * Feb 9, 2018
+ * */
+
 package csp.tool;
 
 import java.io.FileWriter;

@@ -1,10 +1,10 @@
-import abscon.instance.intension.EvaluationManager;
-
-import java.lang.reflect.Array;
+/*
+ * CSCE421 2018Spr
+ * Tao Yao
+ * 09157432
+ * Feb 9, 2018
+ * */
 import java.util.*;
-import java.util.concurrent.ForkJoinPool;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class Main {
 

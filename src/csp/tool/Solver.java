@@ -1,18 +1,20 @@
+/*
+ * CSCE421 2018Spr
+ * Tao Yao
+ * 09157432
+ * Jan. 21, 2018
+ * */
 package csp.tool;
 
 import csp.MyParser;
 import csp.data.Constraint;
 import csp.data.Variable;
 import csp.data.simpleVariable;
-import org.apache.commons.lang3.ObjectUtils;
-
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static java.util.stream.Stream.of;
 
 public class Solver {
     private csp.data.Problem problem = null;
@@ -117,34 +119,29 @@ public class Solver {
         return count;
     }
 
-    public boolean check(final simpleVariable a, int va, final simpleVariable b, int vb) {
+    public boolean check(simpleVariable a, int va, simpleVariable b, int vb) {
         check_counts++;
-        Optional<Boolean> flag = constraints.stream().filter(i -> i.getArity() == 2).map((i) -> {
-            simpleVariable x = a, y = b;
-            int vva = va, vvb = vb;
-            if (i.scope[1].getName().equals(x.getName()) && i.scope[0].getName().equals(y.getName())) {
-                simpleVariable c = x;
-                x = y;
-                y = c;
-                int t = vva;
-                vva = vvb;
-                vvb = t;
-
-            }
-            if (i.scope[0].getName().equals(x.getName()) && i.scope[1].getName().equals(y.getName())) {
-                int[] tuple = {vva, vvb};
+        //TODO utilize performance
+        Boolean haveConflict = constraints.stream().filter(i -> i.getArity() == 2).anyMatch((i) -> {
+            if (i.scope[0].getName().equals(a.getName()) && i.scope[1].getName().equals(b.getName())) {
+                int[] tuple = {va, vb};
                 try {
-                    return i.check(tuple);
+                    return !i.check(tuple);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
-            return true;
-        }).filter(i -> i == false).findAny();
-        if (flag.isPresent()) {
+            else if(i.scope[1].getName().equals(a.getName()) && i.scope[0].getName().equals(b.getName())){
+                int[] tuple = {vb, va};
+                try {
+                    return !i.check(tuple);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
             return false;
-        }
-        return true;
+        });
+        return !haveConflict;
     }
 
     public boolean check(final simpleVariable a, final int va) {
@@ -161,30 +158,29 @@ public class Solver {
         return !flag.isPresent();
     }
 
-    private Map<simpleVariable, Map<simpleVariable, Map<Integer, Integer > > > ac2001Track=null;
-    private boolean ac2001_enable=false;
-    public boolean support(final simpleVariable a, final int va, final simpleVariable b) {
-        if(ac2001_enable){
+    private Map<simpleVariable, Map<simpleVariable, Map<Integer, Integer>>> ac2001Track = null;
+    private boolean ac2001_enable = false;
+
+    public boolean support(final simpleVariable a, final int va, final simpleVariable b)  {
+        if (ac2001_enable) {
             Map<Integer, Integer> pair_ab = ac2001Track.get(a).get(b);
-            if(pair_ab.get(va)!=null){
-                int vb=pair_ab.get(va);
-                if(vb==-1){
+            if (pair_ab.get(va) != null) {
+                int vb = pair_ab.get(va);
+                if (vb == -1) {
                     return false;
-                }
-                else if(b.getCurrent_domain().parallelStream().anyMatch(i->i==vb)){
+                } else if (b.getCurrent_domain().parallelStream().anyMatch(i -> i == vb)) {
                     return true;
                 }
             }
 
             Optional<Integer> x = b.getCurrent_domain().stream().filter(i -> check(a, va, b, i)).findAny();
-            if(x.isPresent()){
-                pair_ab.put(va,x.get());
-            }
-            else{
-                pair_ab.put(va,-1);
+            if (x.isPresent()) {
+                pair_ab.put(va, x.get());
+            } else {
+                pair_ab.put(va, -1);
             }
 
-            return pair_ab.get(va)!=-1;
+            return pair_ab.get(va) != -1;
         }
         return b.getCurrent_domain().stream().anyMatch(i -> check(a, va, b, i));
     }
@@ -197,7 +193,6 @@ public class Solver {
 
 
     private Stream<solverSimpleVarPair> getInitQueue_stream() {
-        //TODO Add distinct
         return constraints.parallelStream().filter(i -> i.getArity() == 2)
                 .flatMap((i) -> {
                     //Double the pairs
@@ -219,7 +214,7 @@ public class Solver {
 
     public enum SOLUTIONS {AC1, AC3, NC, AC2001}
 
-    public solverReporter solve(SOLUTIONS x){
+    public solverReporter solve(SOLUTIONS x) {
         remove_counts = 0;
         long startTime = System.nanoTime();
 
@@ -234,14 +229,13 @@ public class Solver {
                 AC3();
             } else if (x == SOLUTIONS.NC) {
                 NC();
-            } else if (x==SOLUTIONS.AC2001){
+            } else if (x == SOLUTIONS.AC2001) {
                 AC2001();
-            }
-            else {
+            } else {
                 System.out.println("ERROR: Solution not exist");
             }
-            finishedFlag=true;
-            long cpu_time=(System.nanoTime() - startTime) / 1000000;
+            finishedFlag = true;
+            long cpu_time = (System.nanoTime() - startTime) / 1000000;
             return new solverReporter(MyParser.file_name, problem.name, check_counts, cpu_time, remove_counts,
                     getInitial_size(), getFiltered_size(), filterEffect());
         } catch (NoSolutionException e) {
@@ -250,7 +244,7 @@ public class Solver {
         }
     }
 
-    private void AC3() throws NoSolutionException{
+    private void AC3() throws NoSolutionException {
         Queue<solverSimpleVarPair> q = getInitQueue_queue();
         while (q.size() != 0) {
             boolean isRevised = false;
@@ -260,28 +254,30 @@ public class Solver {
                 i.getA().getRefVar().constraints.parallelStream()
                         .filter(j -> j.getArity() == 2)
                         .flatMap(j -> Arrays.stream(j.scope))
-                        .filter(j -> !j.getName().equals(i.getA().getName())&&!j.getName().equals(i.getB().getName()))
+                        .filter(j -> !j.getName().equals(i.getA().getName()) && !j.getName().equals(i.getB().getName()))
                         .map(j -> findSimpleVariable.get(j))
                         .distinct()
                         .forEach((j) -> {
-                            q.offer(new solverSimpleVarPair(j,i.getA()));
+                            q.offer(new solverSimpleVarPair(j, i.getA()));
                         });
             }
         }
     }
-    private void AC2001() throws NoSolutionException{
+
+    private void AC2001() throws NoSolutionException {
         List<solverSimpleVarPair> l = getInitQueue_list();
-        ac2001Track=new HashMap<>();
-        for(solverSimpleVarPair i:l){
+        ac2001Track = new HashMap<>();
+        for (solverSimpleVarPair i : l) {
             ac2001Track.putIfAbsent(i.getA(), new HashMap<>());
-            ac2001Track.get(i.getA()).putIfAbsent(i.getB(),new HashMap<>());
+            ac2001Track.get(i.getA()).putIfAbsent(i.getB(), new HashMap<>());
         }
 
-        ac2001_enable=true;
+        ac2001_enable = true;
         AC3();
-        ac2001_enable=false;
+        ac2001_enable = false;
 
     }
+
     private void AC1() throws NoSolutionException {
         List<solverSimpleVarPair> q = getInitQueue_list();
         boolean revised = true;
@@ -294,9 +290,11 @@ public class Solver {
             }
         }
     }
-    private void NC() throws NoSolutionException{
-        for(simpleVariable i:variables){
-            List<Boolean> rst_flag = i.getCurrent_domain().stream().map(j -> check(i, j)).collect(Collectors.toList());
+
+    private void NC() throws NoSolutionException {
+        for (simpleVariable i : variables) {
+            List<Boolean> rst_flag = i.getCurrent_domain().stream().map(j -> check(i, j))
+                    .collect(Collectors.toList());
             cutDomainByList(i.getCurrent_domain(), rst_flag);
         }
     }

@@ -9,7 +9,7 @@ NUID:09157432
 2. Run java -jar _name_.jar -f [filename] -r -a ac1
 	-f [filename]: The URL of the xcsp file.
 	-r write the output to './solver_output.csv'
-	-a [ac1|ac3|nc]
+	-a [ac1|ac3|ac2001|nc]
 
 ### HW1
 Only used the code and library given in the course webpage. 
@@ -24,3 +24,8 @@ Added 'export data' function.
 100% Original
 
 Feb. 1, 2018
+
+### HW2 Checkpoint 2
+Added AC3 & AC3.1
+
+Observation: The check counts of AC3 is significantly reduced comparing to AC1. But AC3 is hard to be executed parallel, so CPU time is longer than AC1 on some small cases.
