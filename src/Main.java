@@ -9,14 +9,16 @@ import java.util.*;
 public class Main {
 
     public static void main(String[] args) {
-        System.out.println(false||true);
+        System.out.println("a".compareTo("b"));
 //        String[] expr={"X1","X0","ne"};
         int[] tuple={1,2};
         int[][] tuples={{1,2},{3,4}};
         List<Integer> list=new ArrayList<Integer>();
         list.add(1);
         list.add(2);
-        System.out.println(list.contains(2));
+        list.remove(Integer.valueOf(1));
+        System.out.println(list);
+
 //        Arrays.stream(tuples).flatMapToInt(i->Arrays.stream(i)).forEach(System.out::println);
 //
 //        String[][] data = new String[][]{{"a", "b"}, {"c", "d"}, {"e", "f"}};

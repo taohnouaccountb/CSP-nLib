@@ -14,7 +14,7 @@ import java.io.Writer;
 import static java.lang.String.format;
 
 
-public class solverReporter {
+public class solverReporter_ac {
 
     private String name;
 
@@ -32,7 +32,7 @@ public class solverReporter {
 
     private String file_name;
 
-    public solverReporter(String file_name,String name, int cc, long cpu, long fval, double iSize, double fSize, double fEffect) {
+    public solverReporter_ac(String file_name, String name, int cc, long cpu, long fval, double iSize, double fSize, double fEffect) {
         this.file_name=file_name;
         this.name = name;
         this.cc = String.valueOf(cc);

@@ -10,7 +10,9 @@ import csp.MyParser;
 import csp.data.Constraint;
 import csp.data.Variable;
 import csp.data.simpleVariable;
+import csp.tool.bt.variableChooser;
 
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
@@ -77,10 +79,9 @@ public class Solver {
 
     public void init(csp.data.Problem problem) {
         this.problem = problem;
-        long startTime = System.nanoTime();
 
         findSimpleVariable = new HashMap<>();
-        variables = new ArrayList<simpleVariable>();
+        variables = new ArrayList<>();
         problem.variables.forEach(i -> {
             simpleVariable n = new simpleVariable(i);
             variables.add(n);
@@ -88,16 +89,8 @@ public class Solver {
         });
 
         constraints = new ArrayList<Constraint>();
-        problem.constraints.forEach(i -> {
-            constraints.add(i);
-        });
+        constraints.addAll(problem.constraints);
 
-
-//        System.out.println("VAR_SIZE: "+variables.size());
-//        System.out.println("CST_SIZE: "+constraints.size());
-
-        long endTime = System.nanoTime();
-//        System.out.println("INIT_TIME: " + (endTime - startTime)+"ms");
         getInitial_size();
 
     }
@@ -130,8 +123,7 @@ public class Solver {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            }
-            else if(i.scope[1].getName().equals(a.getName()) && i.scope[0].getName().equals(b.getName())){
+            } else if (i.scope[1].getName().equals(a.getName()) && i.scope[0].getName().equals(b.getName())) {
                 int[] tuple = {vb, va};
                 try {
                     return !i.check(tuple);
@@ -161,7 +153,7 @@ public class Solver {
     private Map<simpleVariable, Map<simpleVariable, Map<Integer, Integer>>> ac2001Track = null;
     private boolean ac2001_enable = false;
 
-    public boolean support(final simpleVariable a, final int va, final simpleVariable b)  {
+    public boolean support(final simpleVariable a, final int va, final simpleVariable b) {
         if (ac2001_enable) {
             Map<Integer, Integer> pair_ab = ac2001Track.get(a).get(b);
             if (pair_ab.get(va) != null) {
@@ -212,9 +204,9 @@ public class Solver {
         return getInitQueue_stream().collect(Collectors.toList());
     }
 
-    public enum SOLUTIONS {AC1, AC3, NC, AC2001}
+    public enum SOLUTIONS_ac {AC1, AC3, NC, AC2001}
 
-    public solverReporter solve(SOLUTIONS x) {
+    public solverReporter_ac solve_ac(SOLUTIONS_ac x) {
         remove_counts = 0;
         long startTime = System.nanoTime();
 
@@ -223,23 +215,23 @@ public class Solver {
                 System.out.println("ERROR: Problem Uninitialized");
                 throw new NoSolutionException();
             }
-            if (x == SOLUTIONS.AC1) {
+            if (x == SOLUTIONS_ac.AC1) {
                 AC1();
-            } else if (x == SOLUTIONS.AC3) {
+            } else if (x == SOLUTIONS_ac.AC3) {
                 AC3();
-            } else if (x == SOLUTIONS.NC) {
+            } else if (x == SOLUTIONS_ac.NC) {
                 NC();
-            } else if (x == SOLUTIONS.AC2001) {
+            } else if (x == SOLUTIONS_ac.AC2001) {
                 AC2001();
             } else {
                 System.out.println("ERROR: Solution not exist");
             }
             finishedFlag = true;
             long cpu_time = (System.nanoTime() - startTime) / 1000000;
-            return new solverReporter(MyParser.file_name, problem.name, check_counts, cpu_time, remove_counts,
+            return new solverReporter_ac(MyParser.file_name, problem.name, check_counts, cpu_time, remove_counts,
                     getInitial_size(), getFiltered_size(), filterEffect());
         } catch (NoSolutionException e) {
-            return new solverReporter(MyParser.file_name, problem.name, check_counts, cpu_time, remove_counts,
+            return new solverReporter_ac(MyParser.file_name, problem.name, check_counts, cpu_time, remove_counts,
                     getInitial_size(), -1, -1);
         }
     }
@@ -296,6 +288,124 @@ public class Solver {
             List<Boolean> rst_flag = i.getCurrent_domain().stream().map(j -> check(i, j))
                     .collect(Collectors.toList());
             cutDomainByList(i.getCurrent_domain(), rst_flag);
+        }
+    }
+
+    public void AC_trim(){
+        variables.forEach(simpleVariable::reverseRestore);
+    }
+
+    private long firstTime = 0;
+    private int firstCc = 0;
+    private int firstNv = 0;
+    private int firstBt = 0;
+    private int nv = 0;
+    private int bt = 0;
+
+    public enum SOLUTIONS_bt {BT}
+
+    private List<List<Integer>> bt_solutions = null;
+    public solverReporter_bt solve_bt(SOLUTIONS_bt x, variableChooser.heuristicType var_heuristic) {
+        bt_solutions = new ArrayList<>();
+        remove_counts = 0;
+        check_counts = 0;
+        firstTime = 0;
+        nv = 0;
+        bt = 0;
+        long startTime = System.nanoTime();
+
+        isRelated = new relatedJudge(getInitQueue_stream());
+
+        if (problem == null) {
+            System.out.println("ERROR: Problem Uninitialized");
+        }
+
+        if (x == SOLUTIONS_bt.BT) {
+            BT(var_heuristic);
+        } else {
+            System.out.println("ERROR: Solution not exist");
+        }
+
+        finishedFlag = true;
+        long first_cpu_time = (firstTime - startTime) / 1000000;
+        long cpu_time = (System.nanoTime() - startTime) / 1000000;
+        if(bt_solutions.size()==0){
+            return new solverReporter_bt(problem.name,
+                    var_heuristic.toString(), "static",
+                    "LX", "static",
+                    firstCc, firstNv, firstBt, first_cpu_time, new ArrayList<Integer>(),
+                    check_counts, nv, bt, cpu_time, 0);
+        }
+        return new solverReporter_bt(problem.name,
+                var_heuristic.toString(), "static",
+                "LX", "static",
+                firstCc, firstNv, firstBt, first_cpu_time, bt_solutions.get(0),
+                check_counts, nv, bt, cpu_time, bt_solutions.size());
+    }
+
+
+    relatedJudge isRelated = null;
+
+    private void BT(variableChooser.heuristicType mode){
+        variableChooser chooser = new variableChooser(variables, mode, isRelated);
+        int var_num = chooser.getSize();
+        int v[] = new int[var_num];
+
+        boolean consistent = true;
+        int ith = 0;
+        //search
+        while (ith > -1) {
+            simpleVariable cur = chooser.get(ith);
+            if (consistent) {
+                //bt-label
+                assert(!cur.getCurrent_domain().isEmpty());
+                while (!cur.getCurrent_domain().isEmpty()) {
+                    v[ith] = cur.getCurrent_domain().getFirst();
+                    nv++;
+                    boolean findConflict=false;
+                    for (int k = 0; !findConflict && k < ith; k++) {
+                        if (isRelated.isExist(cur,chooser.get(k))) {
+                            findConflict = !check(cur, v[ith], chooser.get(k), v[k]);
+                        }
+                    }
+                    if (findConflict) cur.getCurrent_domain().removeFirst();
+                    if (!findConflict) break;
+                }
+                if(cur.getCurrent_domain().isEmpty()) consistent=false;
+                else consistent=true;
+
+                if (consistent) {
+                    ith++;
+                }
+            } else {
+                //bt-unlabel
+                bt++;
+                int h = ith - 1;
+                if(h==-1) break;
+                chooser.get(ith).restore();
+                chooser.get(h).getCurrent_domain().remove(Integer.valueOf(v[h]));
+                consistent = !chooser.get(h).getCurrent_domain().isEmpty();
+                ith = h;
+            }
+            if (ith >= var_num) {
+                if (bt_solutions.isEmpty()) {
+                    firstBt = bt;
+                    firstCc = check_counts;
+                    firstNv = nv;
+                    firstTime = System.nanoTime();
+                }
+                bt_solutions.add(chooser.transSequence(v));
+
+/*                for(int i=0;i<ith;i++){
+                    for(int j=0;j<i;j++){
+                        assert(check(chooser.get(i),v[i],chooser.get(j),v[j]));
+                    }
+                }*/
+
+                chooser.get(ith-1).getCurrent_domain().remove(Integer.valueOf(v[ith-1]));
+                consistent = !chooser.get(ith-1).getCurrent_domain().isEmpty();
+                ith--;
+            }
         }
     }
 

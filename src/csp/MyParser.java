@@ -11,15 +11,19 @@ import abscon.instance.tools.InstanceParser;
 import csp.data.*;
 import csp.io.sortPrint;
 import csp.tool.Solver;
-import csp.tool.solverReporter;
+import csp.tool.bt.variableChooser;
+import csp.tool.solverReporter_ac;
+import csp.tool.solverReporter_bt;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static csp.tool.Solver.SOLUTIONS_bt.BT;
+
 
 public class MyParser {
     static private List<Variable> variables;
-    static public Constraint constraints;
+    static public List<Constraint> constraints;
     static public Problem problem;
     static public String file_name;
 
@@ -27,7 +31,8 @@ public class MyParser {
         InstanceParser parser = new InstanceParser();
         parser.loadInstance(filename);
         parser.parse(false);
-        variables = new ArrayList<Variable>();
+        variables = new ArrayList<>();
+        constraints = new ArrayList<>();
 
         //Variables
 
@@ -37,21 +42,11 @@ public class MyParser {
         }
 
         //Constraints
-
         for (String key : parser.getMapOfConstraints().keySet()) {
-            Constraint con = null;
             try {
-                con = Constraint.genConstraint(parser.getMapOfConstraints().get(key));
-                if(constraints==null){
-                    constraints=con;
-                }
-                else{
-                    constraints.add(con);
-                    constraints=constraints.getNext();
-                }
+                Constraint con = Constraint.genConstraint(parser.getMapOfConstraints().get(key));
+                constraints.add(con);
             } catch (DatatypeMisMachthing e) {
-                e.printStackTrace();
-            } catch (DataAccessError e){
                 e.printStackTrace();
             }
         }
@@ -82,6 +77,9 @@ public class MyParser {
 
         boolean validArg=false;
         boolean needWrite=false;
+        variableChooser.heuristicType heuristicType=null;
+
+        for(String s:args) if(s.equals("-r")) needWrite=true;
         for(int i=0;i<args.length;i++){
             if(args[i].equals("-f")){
                 validArg=true;
@@ -102,26 +100,57 @@ public class MyParser {
                 //Preprocess
                 Solver S=new Solver();
                 S.init(problem);
-                S.solve(Solver.SOLUTIONS.NC);
+                S.solve_ac(Solver.SOLUTIONS_ac.NC);
 
                 //Solve
-                solverReporter result=null;
+                solverReporter_ac result=null;
                 if(args[i+1].equals("ac1")){
-                    result=S.solve(Solver.SOLUTIONS.AC1);
+                    result=S.solve_ac(Solver.SOLUTIONS_ac.AC1);
                 }
                 else if(args[i+1].equals("ac3")){
-                    result=S.solve(Solver.SOLUTIONS.AC3);
+                    result=S.solve_ac(Solver.SOLUTIONS_ac.AC3);
                 }
                 else if(args[i+1].equals("ac2001")){
-                    result=S.solve(Solver.SOLUTIONS.AC2001);
+                    result=S.solve_ac(Solver.SOLUTIONS_ac.AC2001);
                 }
 
                 //Output
                 System.out.println(result);
                 if(needWrite) result.writeToFile("solver_output.csv");
             }
-            else if(args[i].equals("-r")){
-                needWrite=true;
+            else if(args[i].equals("-s")){
+                for(int k=0;k<args.length;k++){
+                    if(args[k].equals("-u")){
+                        if(args[k+1].equals("LX")){
+                            heuristicType= variableChooser.heuristicType.LX;
+                        }
+                        else if(args[k+1].equals("LD")){
+                            heuristicType= variableChooser.heuristicType.LD;
+                        }
+                        else if(args[k+1].equals("DEG")){
+                            heuristicType= variableChooser.heuristicType.DEG;
+                        }
+                        else if(args[k+1].equals("DD")){
+                            heuristicType= variableChooser.heuristicType.DD;
+                        }
+                        break;
+                    }
+                }
+                if(heuristicType==null) heuristicType= variableChooser.heuristicType.LX;
+                Solver S=new Solver();
+                S.init(problem);
+                S.solve_ac(Solver.SOLUTIONS_ac.NC);
+
+                //solve
+                solverReporter_bt result=null;
+                if(args[i+1].equals("BT")){
+                    result=S.solve_bt(Solver.SOLUTIONS_bt.BT,heuristicType);
+                    System.out.print(result);
+                    if(needWrite) result.writeToFile("solver_output.csv");
+                }
+                else{
+                    System.out.println("Wrong Parameter of '-s'");
+                }
             }
         }
         if(!validArg){
@@ -130,8 +159,9 @@ public class MyParser {
             file_name="data";
             Solver S=new Solver();
             S.init(problem);
-            S.solve(Solver.SOLUTIONS.NC);
-            solverReporter result=S.solve(Solver.SOLUTIONS.AC2001);
+            S.solve_ac(Solver.SOLUTIONS_ac.NC);
+            S.AC_trim();
+            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.BT,variableChooser.heuristicType.DEG);
             result.writeToFile("solver_output.csv");
             System.out.println(result);
         }

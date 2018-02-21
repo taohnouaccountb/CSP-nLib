@@ -2,10 +2,9 @@ package csp.tool;
 
 import csp.data.simpleVariable;
 
-public class solverSimpleVarPair {
+public class solverSimpleVarPair implements Comparable{
     private simpleVariable a=null;
     private simpleVariable b=null;
-    public solverSimpleVarPair(){}
     public solverSimpleVarPair(simpleVariable a, simpleVariable b){
         this.a=a;
         this.b=b;
@@ -28,5 +27,22 @@ public class solverSimpleVarPair {
 
     public simpleVariable getB() {
         return b;
+    }
+
+    @Override
+    public int compareTo(Object o) {
+        solverSimpleVarPair t=(solverSimpleVarPair) o;
+        int ca=a.getName().compareTo(t.a.getName());
+        if(ca!=0){
+            return ca;
+        }
+        else{
+            return b.getName().compareTo(t.b.getName());
+        }
+    }
+
+    @Override
+    public int hashCode(){
+        return (int)(((long)a.hashCode()+b.hashCode())%10000000);
     }
 }
