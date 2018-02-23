@@ -114,8 +114,7 @@ public class Solver {
 
     public boolean check(simpleVariable a, int va, simpleVariable b, int vb) {
         check_counts++;
-        //TODO utilize performance
-        Boolean haveConflict = constraints.stream().filter(i -> i.getArity() == 2).anyMatch((i) -> {
+        Boolean haveConflict = a.getRefVar().constraints.stream().filter(i -> i.getArity() == 2).anyMatch((i) -> {
             if (i.scope[0].getName().equals(a.getName()) && i.scope[1].getName().equals(b.getName())) {
                 int[] tuple = {va, vb};
                 try {
@@ -185,7 +184,7 @@ public class Solver {
 
 
     private Stream<solverSimpleVarPair> getInitQueue_stream() {
-        return constraints.parallelStream().filter(i -> i.getArity() == 2)
+        return constraints.stream().filter(i -> i.getArity() == 2)
                 .flatMap((i) -> {
                     //Double the pairs
                     simpleVariable a = findSimpleVariable.get(i.scope[0]);
@@ -330,13 +329,13 @@ public class Solver {
         long first_cpu_time = (firstTime - startTime) / 1000000;
         long cpu_time = (System.nanoTime() - startTime) / 1000000;
         if(bt_solutions.size()==0){
-            return new solverReporter_bt(problem.name,
+            return new solverReporter_bt(chooser, problem.name,
                     var_heuristic.toString(), "static",
                     "LX", "static",
                     firstCc, firstNv, firstBt, first_cpu_time, new ArrayList<Integer>(),
                     check_counts, nv, bt, cpu_time, 0);
         }
-        return new solverReporter_bt(problem.name,
+        return new solverReporter_bt(chooser, problem.name,
                 var_heuristic.toString(), "static",
                 "LX", "static",
                 firstCc, firstNv, firstBt, first_cpu_time, bt_solutions.get(0),
@@ -344,10 +343,10 @@ public class Solver {
     }
 
 
-    relatedJudge isRelated = null;
-
+    private relatedJudge isRelated = null;
+    private variableChooser chooser;
     private void BT(variableChooser.heuristicType mode){
-        variableChooser chooser = new variableChooser(variables, mode, isRelated);
+        chooser = new variableChooser(variables, mode, isRelated);
         int var_num = chooser.getSize();
         int v[] = new int[var_num];
 

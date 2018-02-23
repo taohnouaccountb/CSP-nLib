@@ -11,7 +11,7 @@ NUID:09157432
 	-r write the output to './solver_output.csv'
 	-a [ac1|ac3|ac2001|nc]
 	-s [BT]
-	-u [LX|LD|DEG|DD]
+	-u [LX|LD|DEG|DD|WMO]
 
 ### HW1
 Only used the code and library given in the course webpage. 
@@ -34,3 +34,8 @@ Observation: The check counts of AC3 is significantly reduced comparing to AC1. 
 
 ### HW3 Checkpoint 1
 Added BT LX|LD|DEG|DD
+
+### HW3 Checkpoint 2
+Added WMO
+
+Observation: One thing can be confirmed is that the variable heuristic has a strong effect on the efficiency of the BT search. DEG is somehow slower than other heuristics. DD might be the most efficient one.

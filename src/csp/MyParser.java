@@ -133,6 +133,9 @@ public class MyParser {
                         else if(args[k+1].equals("DD")){
                             heuristicType= variableChooser.heuristicType.DD;
                         }
+                        else if(args[k+1].equals("WMO")){
+                            heuristicType= variableChooser.heuristicType.WMO;
+                        }
                         break;
                     }
                 }
@@ -140,13 +143,18 @@ public class MyParser {
                 Solver S=new Solver();
                 S.init(problem);
                 S.solve_ac(Solver.SOLUTIONS_ac.NC);
+                S.AC_trim();
 
                 //solve
                 solverReporter_bt result=null;
                 if(args[i+1].equals("BT")){
                     result=S.solve_bt(Solver.SOLUTIONS_bt.BT,heuristicType);
                     System.out.print(result);
-                    if(needWrite) result.writeToFile("solver_output.csv");
+                    if(needWrite){
+                        result.writeToFile("solver_output.csv");
+                        result.writeToFileOrder("solver_output_ord.csv");
+                    }
+
                 }
                 else{
                     System.out.println("Wrong Parameter of '-s'");
@@ -155,14 +163,15 @@ public class MyParser {
         }
         if(!validArg){
             //Default
-            parser = new MyParser("./data.xml");
+            parser = new MyParser("./data-zebra.xml");
             file_name="data";
             Solver S=new Solver();
             S.init(problem);
             S.solve_ac(Solver.SOLUTIONS_ac.NC);
             S.AC_trim();
-            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.BT,variableChooser.heuristicType.DEG);
+            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.BT,variableChooser.heuristicType.DD);
             result.writeToFile("solver_output.csv");
+            result.writeToFileOrder("solver_output_ord.csv");
             System.out.println(result);
         }
 
