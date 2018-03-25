@@ -10,9 +10,9 @@ import csp.MyParser;
 import csp.data.Constraint;
 import csp.data.Variable;
 import csp.data.simpleVariable;
-import csp.tool.bt.variableChooser;
+import csp.tool.bt.staticVariableChooser;
+import csp.tool.bt.variableChooser.heuristicType;
 
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
@@ -301,11 +301,11 @@ public class Solver {
     private int nv = 0;
     private int bt = 0;
 
-    public enum SOLUTIONS_bt {BT}
+    public enum SOLUTIONS_bt {BT, CBJ, FC}
 
-    private List<List<Integer>> bt_solutions = null;
-    public solverReporter_bt solve_bt(SOLUTIONS_bt x, variableChooser.heuristicType var_heuristic) {
-        bt_solutions = new ArrayList<>();
+    private List<List<Integer>> search_solutions = null;
+    public solverReporter_bt solve_bt(SOLUTIONS_bt x, heuristicType var_heuristic) {
+        search_solutions = new ArrayList<>();
         remove_counts = 0;
         check_counts = 0;
         firstTime = 0;
@@ -321,32 +321,36 @@ public class Solver {
 
         if (x == SOLUTIONS_bt.BT) {
             BT(var_heuristic);
-        } else {
+        }else if (x == SOLUTIONS_bt.CBJ){
+            CBJ(var_heuristic);
+        }else if(x== SOLUTIONS_bt.FC){
+            FC(var_heuristic);
+        }
+        else {
             System.out.println("ERROR: Solution not exist");
         }
 
         finishedFlag = true;
         long first_cpu_time = (firstTime - startTime) / 1000000;
         long cpu_time = (System.nanoTime() - startTime) / 1000000;
-        if(bt_solutions.size()==0){
+        if(search_solutions.size()==0){
             return new solverReporter_bt(chooser, problem.name,
                     var_heuristic.toString(), "static",
                     "LX", "static",
-                    firstCc, firstNv, firstBt, first_cpu_time, new ArrayList<Integer>(),
+                    firstCc, firstNv, firstBt, -1, new ArrayList<Integer>(),
                     check_counts, nv, bt, cpu_time, 0);
         }
         return new solverReporter_bt(chooser, problem.name,
                 var_heuristic.toString(), "static",
                 "LX", "static",
-                firstCc, firstNv, firstBt, first_cpu_time, bt_solutions.get(0),
-                check_counts, nv, bt, cpu_time, bt_solutions.size());
+                firstCc, firstNv, firstBt, first_cpu_time, search_solutions.get(0),
+                check_counts, nv, bt, cpu_time, search_solutions.size());
     }
-
-
     private relatedJudge isRelated = null;
-    private variableChooser chooser;
-    private void BT(variableChooser.heuristicType mode){
-        chooser = new variableChooser(variables, mode, isRelated);
+    private staticVariableChooser chooser;
+
+    private void BT(heuristicType mode){
+        chooser = new staticVariableChooser(variables, mode, isRelated);
         int var_num = chooser.getSize();
         int v[] = new int[var_num];
 
@@ -387,13 +391,13 @@ public class Solver {
                 ith = h;
             }
             if (ith >= var_num) {
-                if (bt_solutions.isEmpty()) {
+                if (search_solutions.isEmpty()) {
                     firstBt = bt;
                     firstCc = check_counts;
                     firstNv = nv;
                     firstTime = System.nanoTime();
                 }
-                bt_solutions.add(chooser.transSequence(v));
+                search_solutions.add(chooser.transSequence(v));
 
 /*                for(int i=0;i<ith;i++){
                     for(int j=0;j<i;j++){
@@ -408,6 +412,193 @@ public class Solver {
         }
     }
 
+    private void CBJ(heuristicType mode){
+        chooser = new staticVariableChooser(variables, mode, isRelated);
+        int var_num = chooser.getSize();
+        int v[] = new int[var_num];
+        Set<Integer> conf_set[] = new TreeSet[var_num];
+        for(int i=0;i<conf_set.length;i++){
+            conf_set[i]=new TreeSet<>();
+            conf_set[i].add(-1);
+        }
+        boolean consistent = true;
+        int ith = 0;
+        //search
+        while (ith >=0) {
+//            System.out.println(ith);
+//            if(ith==0) System.out.println("XX");
+            simpleVariable cur = chooser.get(ith);
+            if (consistent) {
+                //bt-label
+                assert(!cur.getCurrent_domain().isEmpty());
+                while (!cur.getCurrent_domain().isEmpty()) {
+                    v[ith] = cur.getCurrent_domain().getFirst();
+                    assert(check(cur,v[ith],chooser.get(0),v[0]));
+
+                    nv++;
+                    boolean findConflict=false;
+                    int k;
+                    for (k = 0; !findConflict && k < ith; k++) {
+                        if (isRelated.isExist(cur,chooser.get(k))) {
+                            findConflict = !check(cur, v[ith], chooser.get(k), v[k]);
+                        }
+                    }
+                    if (findConflict){
+                        conf_set[ith].add(k-1);
+                        cur.getCurrent_domain().removeFirst();
+                    }
+                    if (!findConflict) break;
+                }
+                if(cur.getCurrent_domain().isEmpty()) consistent=false;
+                else consistent=true;
+
+                if (consistent) {
+                    ith++;
+                }
+            } else {
+                //bt-unlabel
+                bt++;
+                int h = conf_set[ith].stream().max(Integer::compareTo).get();
+                if(h<0) break;
+
+                conf_set[h].addAll(conf_set[ith]);
+                conf_set[h].remove(Integer.valueOf(h));
+                for(int j=h+1;j<=ith;j++){
+                    conf_set[j].clear();
+                    conf_set[j].add(-1);
+                    chooser.get(j).restore();
+                }
+                chooser.get(h).getCurrent_domain().remove(Integer.valueOf(v[h]));
+                consistent = !chooser.get(h).getCurrent_domain().isEmpty();
+                ith = h;
+            }
+            if (ith >= var_num) {
+                if (search_solutions.isEmpty()) {
+                    firstBt = bt;
+                    firstCc = check_counts;
+                    firstNv = nv;
+                    firstTime = System.nanoTime();
+                }
+                search_solutions.add(chooser.transSequence(v));
+
+/*                for(int i=0;i<ith;i++){
+                    for(int j=0;j<i;j++){
+                        assert(check(chooser.get(i),v[i],chooser.get(j),v[j]));
+                    }
+                }*/
+                for(int i=0;i<ith-1;i++) conf_set[ith-1].add(i);
+
+                chooser.get(ith-1).getCurrent_domain().remove(Integer.valueOf(v[ith-1]));
+                consistent = !chooser.get(ith-1).getCurrent_domain().isEmpty();
+                ith--;
+            }
+        }
+    }
+
+    private void FC(heuristicType mode){
+        chooser = new staticVariableChooser(variables, mode, isRelated);
+        int var_num = chooser.getSize();
+        int v[] = new int[var_num];
+        Stack<Set<Integer> >[] reductions= new Stack[var_num];
+        List<Integer>[] future_fc=new ArrayList[var_num];
+        for(int i=0;i<var_num;i++){
+            reductions[i]=new Stack();
+            future_fc[i]=new ArrayList<>();
+        }
+        int ith=0;
+
+        boolean consistent=true;
+        while (ith > -1) {
+            simpleVariable cur = chooser.get(ith);
+
+            if (consistent) {
+                assert future_fc[ith].isEmpty();
+                //fc-label
+                assert(!cur.getCurrent_domain().isEmpty());
+                while (!cur.getCurrent_domain().isEmpty()) {
+                    v[ith] = cur.getCurrent_domain().getFirst();
+                    nv++;
+                    boolean findWipeout=false;
+                    for (int k = ith+1; !findWipeout && k < var_num; k++) {
+                        simpleVariable curr= chooser.get(k);
+                        if (isRelated.isExist(cur,curr)) {
+                            //check-foward
+                            Set<Integer> reduction=new TreeSet<>();
+                            for(int m:curr.getCurrent_domain()){
+                                if(!check(cur, v[ith], curr, m)){
+                                    reduction.add(m);
+                                }
+                            }
+                            curr.getCurrent_domain().removeAll(reduction);
+                            if(!reduction.isEmpty()){
+                                reductions[k].push(reduction);
+                                future_fc[ith].add(k);
+                            }
+                        }
+                        if(curr.getCurrent_domain().isEmpty()){
+                            findWipeout=true;
+                            // undo-reductions
+                            for(int m:future_fc[ith]){
+                                Set<Integer> reduction = reductions[m].pop();
+                                chooser.get(m).getCurrent_domain().addAll(reduction);
+                            }
+                            future_fc[ith].clear();
+                        }
+                        else{
+                            findWipeout=false;
+                        }
+                    }
+                    if (findWipeout) cur.getCurrent_domain().removeFirst();
+                    if (!findWipeout) break;
+                }
+                if(cur.getCurrent_domain().isEmpty()) consistent=false;
+                else consistent=true;
+                if (consistent) {
+                    ith++;
+                }
+            } else {
+                //fc-unlabel
+                bt++;
+                int h = ith - 1;
+                if(h==-1) break;
+                // undo-reductions
+                for(int m:future_fc[h]){
+                    Set<Integer> reduction = reductions[m].pop();
+                    chooser.get(m).getCurrent_domain().addAll(reduction);
+                }
+                future_fc[h].clear();
+
+                //update-current-domain
+                cur.restore();
+                for(Set<Integer> m:reductions[ith]){
+                    cur.getCurrent_domain().removeAll(m);
+                }
+
+                chooser.get(h).getCurrent_domain().remove(Integer.valueOf(v[h]));
+                consistent = !chooser.get(h).getCurrent_domain().isEmpty();
+                ith = h;
+            }
+            if (ith == var_num) {
+                if (search_solutions.isEmpty()) {
+                    firstBt = bt;
+                    firstCc = check_counts;
+                    firstNv = nv;
+                    firstTime = System.nanoTime();
+                }
+                search_solutions.add(chooser.transSequence(v));
+
+/*                for(int i=0;i<ith;i++){
+                    for(int j=0;j<i;j++){
+                        assert(check(chooser.get(i),v[i],chooser.get(j),v[j]));
+                    }
+                }*/
+
+                chooser.get(ith-1).getCurrent_domain().remove(Integer.valueOf(v[ith-1]));
+                consistent = !chooser.get(ith-1).getCurrent_domain().isEmpty();
+                ith--;
+            }
+        }
+    }
 }
 
 

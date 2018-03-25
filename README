@@ -10,8 +10,8 @@ NUID:09157432
 	-f [filename]: The URL of the xcsp file.
 	-r write the output to './solver_output.csv'
 	-a [ac1|ac3|ac2001|nc]
-	-s [BT]
-	-u [LX|LD|DEG|DD|WMO]
+	-s [BT|CBJ]
+	-u [LX|LD|DEG|DD|MWO]
 
 ### HW1
 Only used the code and library given in the course webpage. 
@@ -39,3 +39,19 @@ Added BT LX|LD|DEG|DD
 Added WMO
 
 Observation: One thing can be confirmed is that the variable heuristic has a strong effect on the efficiency of the BT search. DEG is somehow slower than other heuristics. DD might be the most efficient one.
+
+### HW4 Checkpoint 1
+Added CBJ
+
+### HW4 Final
+Fixed the bug in DEG, DDR and MWO
+
+### HW5 Checkpoint 1
+Added FC
+Program need reconstitution to add the dynamic ordering heuristic.
+
+
+
+
+
+Observation: Dynamic ordering heuristic is significantly better than static ordering herustic. The domino effect make it even better.

@@ -1,7 +1,7 @@
 package csp.tool;
 
 import csp.data.simpleVariable;
-import csp.tool.bt.variableChooser;
+import csp.tool.bt.staticVariableChooser;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -41,8 +41,8 @@ public class solverReporter_bt {
 //
 //15    private String file_name;
     private String vairable_order_heuristic;
-    private variableChooser chooser;
-    public solverReporter_bt(variableChooser chooser, String name, String variable_order_heuristic, String var_static_dynamic, String value_order_heuristic, String val_static_dynamic, int firstCc, int firstNv, int firstBt, long firstCpu, List<Integer> firstSolution, int cc, int nv, int bt, long cpu, int solutionNumbers) {
+    private staticVariableChooser chooser;
+    public solverReporter_bt(staticVariableChooser chooser, String name, String variable_order_heuristic, String var_static_dynamic, String value_order_heuristic, String val_static_dynamic, int firstCc, int firstNv, int firstBt, long firstCpu, List<Integer> firstSolution, int cc, int nv, int bt, long cpu, int solutionNumbers) {
         if(variable_order_heuristic.equals("LX")){
             variable_order_heuristic="1 LX";
         }
@@ -55,8 +55,8 @@ public class solverReporter_bt {
         else if(variable_order_heuristic.equals("DD")){
             variable_order_heuristic="4 DD";
         }
-        else if(variable_order_heuristic.equals("WMO")){
-            vairable_order_heuristic="5 WMO";
+        else if(variable_order_heuristic.equals("MWO")){
+            vairable_order_heuristic="5 MWO";
         }
         this.vairable_order_heuristic=variable_order_heuristic;
         this.chooser=chooser;

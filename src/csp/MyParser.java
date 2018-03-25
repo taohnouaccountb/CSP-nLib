@@ -11,14 +11,13 @@ import abscon.instance.tools.InstanceParser;
 import csp.data.*;
 import csp.io.sortPrint;
 import csp.tool.Solver;
-import csp.tool.bt.variableChooser;
+import csp.tool.bt.staticVariableChooser;
+import csp.tool.bt.variableChooser.heuristicType;
 import csp.tool.solverReporter_ac;
 import csp.tool.solverReporter_bt;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static csp.tool.Solver.SOLUTIONS_bt.BT;
 
 
 public class MyParser {
@@ -77,7 +76,7 @@ public class MyParser {
 
         boolean validArg=false;
         boolean needWrite=false;
-        variableChooser.heuristicType heuristicType=null;
+        heuristicType heuristicType=null;
 
         for(String s:args) if(s.equals("-r")) needWrite=true;
         for(int i=0;i<args.length;i++){
@@ -122,24 +121,27 @@ public class MyParser {
                 for(int k=0;k<args.length;k++){
                     if(args[k].equals("-u")){
                         if(args[k+1].equals("LX")){
-                            heuristicType= variableChooser.heuristicType.LX;
+                            heuristicType= heuristicType.LX;
                         }
                         else if(args[k+1].equals("LD")){
-                            heuristicType= variableChooser.heuristicType.LD;
+                            heuristicType= heuristicType.LD;
                         }
                         else if(args[k+1].equals("DEG")){
-                            heuristicType= variableChooser.heuristicType.DEG;
+                            heuristicType= heuristicType.DEG;
                         }
                         else if(args[k+1].equals("DD")){
-                            heuristicType= variableChooser.heuristicType.DD;
+                            heuristicType= heuristicType.DD;
                         }
-                        else if(args[k+1].equals("WMO")){
-                            heuristicType= variableChooser.heuristicType.WMO;
+                        else if(args[k+1].equals("MWO")){
+                            heuristicType= heuristicType.MWO;
+                        }
+                        else{
+                            throw new java.lang.UnknownError("Wrong Heuristic Type");
                         }
                         break;
                     }
                 }
-                if(heuristicType==null) heuristicType= variableChooser.heuristicType.LX;
+                if(heuristicType==null) heuristicType= heuristicType.LX;
                 Solver S=new Solver();
                 S.init(problem);
                 S.solve_ac(Solver.SOLUTIONS_ac.NC);
@@ -156,6 +158,22 @@ public class MyParser {
                     }
 
                 }
+                else if (args[i+1].equals("CBJ")){
+                    result=S.solve_bt(Solver.SOLUTIONS_bt.CBJ,heuristicType);
+                    System.out.print(result);
+                    if(needWrite){
+                        result.writeToFile("solver_output.csv");
+                        result.writeToFileOrder("solver_output_ord.csv");
+                    }
+                }
+                else if (args[i+1].equals("FC")){
+                    result=S.solve_bt(Solver.SOLUTIONS_bt.FC,heuristicType);
+                    System.out.print(result);
+                    if(needWrite){
+                        result.writeToFile("solver_output.csv");
+                        result.writeToFileOrder("solver_output_ord.csv");
+                    }
+                }
                 else{
                     System.out.println("Wrong Parameter of '-s'");
                 }
@@ -169,7 +187,7 @@ public class MyParser {
             S.init(problem);
             S.solve_ac(Solver.SOLUTIONS_ac.NC);
             S.AC_trim();
-            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.BT,variableChooser.heuristicType.DD);
+            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.FC, heuristicType.LX);
             result.writeToFile("solver_output.csv");
             result.writeToFileOrder("solver_output_ord.csv");
             System.out.println(result);
