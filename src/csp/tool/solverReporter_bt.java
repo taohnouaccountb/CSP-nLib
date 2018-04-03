@@ -2,6 +2,7 @@ package csp.tool;
 
 import csp.data.simpleVariable;
 import csp.tool.bt.staticVariableChooser;
+import csp.tool.bt.variableChooser;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -14,8 +15,8 @@ import static java.lang.String.format;
 
 public class solverReporter_bt {
 
-    private List<String> column=new ArrayList<>();
-//0    private String name;
+    private List<String> column = new ArrayList<>();
+    //0    private String name;
 //
 //1    private String variable_order_heuristic;
 //
@@ -40,27 +41,31 @@ public class solverReporter_bt {
 //14    private String solutionNumbers;
 //
 //15    private String file_name;
-    private String vairable_order_heuristic;
-    private staticVariableChooser chooser;
-    public solverReporter_bt(staticVariableChooser chooser, String name, String variable_order_heuristic, String var_static_dynamic, String value_order_heuristic, String val_static_dynamic, int firstCc, int firstNv, int firstBt, long firstCpu, List<Integer> firstSolution, int cc, int nv, int bt, long cpu, int solutionNumbers) {
-        if(variable_order_heuristic.equals("LX")){
-            variable_order_heuristic="1 LX";
+    private String variable_order_heuristic;
+    private variableChooser chooser;
+
+    public solverReporter_bt(variableChooser chooser, String name, String BTtype, String variable_order_heuristic, String var_static_dynamic, String value_order_heuristic, String val_static_dynamic, int firstCc, int firstNv, int firstBt, long firstCpu, List<Integer> firstSolution, int cc, int nv, int bt, long cpu, int solutionNumbers) {
+        if (variable_order_heuristic.equals("LX")) {
+            variable_order_heuristic = "1 LX";
+        } else if (variable_order_heuristic.equals("LD")) {
+            variable_order_heuristic = "2 LD";
+        } else if (variable_order_heuristic.equals("DEG")) {
+            variable_order_heuristic = "3 DEG";
+        } else if (variable_order_heuristic.equals("DD")) {
+            variable_order_heuristic = "4 DD";
+        } else if (variable_order_heuristic.equals("MWO")) {
+            variable_order_heuristic = "5 MWO";
+        } else if (variable_order_heuristic.equals("dLD")) {
+            variable_order_heuristic = "6 dLD";
+        } else if (variable_order_heuristic.equals("dDEG")) {
+            variable_order_heuristic = "7 dDEG";
+        } else if (variable_order_heuristic.equals("dDD")) {
+            variable_order_heuristic = "8 dDD";
         }
-        else if(variable_order_heuristic.equals("LD")){
-            variable_order_heuristic="2 LD";
-        }
-        else if(variable_order_heuristic.equals("DEG")){
-            variable_order_heuristic="3 DEG";
-        }
-        else if(variable_order_heuristic.equals("DD")){
-            variable_order_heuristic="4 DD";
-        }
-        else if(variable_order_heuristic.equals("MWO")){
-            vairable_order_heuristic="5 MWO";
-        }
-        this.vairable_order_heuristic=variable_order_heuristic;
-        this.chooser=chooser;
+        this.variable_order_heuristic = variable_order_heuristic;
+        this.chooser = chooser;
         column.add(name);
+        column.add(BTtype);
         column.add(variable_order_heuristic);
         column.add(var_static_dynamic);
         column.add(value_order_heuristic);
@@ -77,15 +82,15 @@ public class solverReporter_bt {
         column.add(String.valueOf(solutionNumbers));
     }
 
-    public void writeToFile(String addr){
+    public void writeToFile(String addr) {
         try {
-            Writer writer = new FileWriter(addr,true);
-            String line=file_name;
-            for(int i=0;i<column.size();i++){
-                if(i==9) continue;
-                line += ", "+column.get(i);
+            Writer writer = new FileWriter(addr, true);
+            String line = file_name;
+            for (int i = 0; i < column.size(); i++) {
+                if (i == 9) continue;
+                line += ", " + column.get(i);
             }
-            line+="\n";
+            line += "\n";
             writer.write(line);
             writer.close();
             try {
@@ -93,29 +98,31 @@ public class solverReporter_bt {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        }catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void writeToFileOrder(String addr){
+    public void writeToFileOrder(String addr) {
         try {
-            Writer writer = new FileWriter(addr,true);
-            String line="";
-            line+= file_name+", "+vairable_order_heuristic;
-            for(simpleVariable i:chooser.li){
-                line+=", "+i.getName();
+            Writer writer = new FileWriter(addr, true);
+            String line = "";
+            line += file_name + ", " + variable_order_heuristic;
+            for (simpleVariable i : chooser.li) {
+                line += ", " + i.getName();
             }
-            writer.write(line+"\n");
+            writer.write(line + "\n");
             writer.close();
-        }catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
     @Override
-    public String toString(){
-        final String[] dict={
+    public String toString() {
+        final String[] dict = {
                 "Instance name: ",
+                "Search: ",
                 "variable-order-heuristic: ",
                 "var-static-dynamic: ",
                 "value-ordering-heuristic: ",
@@ -131,11 +138,11 @@ public class solverReporter_bt {
                 "all-sol cpu: ",
                 "Number of solutions: "
         };
-        if(dict.length!=column.size()) throw new java.lang.UnknownError("Wrong COLUMN data");
+        if (dict.length != column.size()) throw new java.lang.UnknownError("Wrong COLUMN data");
 
-        String ret="";
-        for(int i=0;i<dict.length;i++){
-            ret+=dict[i]+column.get(i)+"\n";
+        String ret = "";
+        for (int i = 0; i < dict.length; i++) {
+            ret += dict[i] + column.get(i) + "\n";
         }
 
         return ret;

@@ -11,7 +11,7 @@ NUID:09157432
 	-r write the output to './solver_output.csv'
 	-a [ac1|ac3|ac2001|nc]
 	-s [BT|CBJ]
-	-u [LX|LD|DEG|DD|MWO]
+	-u [LX|LD|DEG|DD|MWO|dDD|dDEG|dLD]
 
 ### HW1
 Only used the code and library given in the course webpage. 
@@ -50,8 +50,11 @@ Fixed the bug in DEG, DDR and MWO
 Added FC
 Program need reconstitution to add the dynamic ordering heuristic.
 
+### HW5 Final
+Added dynamic variables ordering dDD/dLD/dDEG
 
+Observation: Dynamic ordering heuristic is significantly better than static ordering herustic. The domino effect make it better.
+   Time consuming: BT is slower than both CBJ and FC. In most cases, FC is faster than CBJ, but it does exist some cases that FC is slower. When FC is used with dynamic ordering, it becomes faster.
 
-
-
-Observation: Dynamic ordering heuristic is significantly better than static ordering herustic. The domino effect make it even better.
+### HW6 Checkpoint1
+Finished FC-CBJ and WMO variable heuristic.

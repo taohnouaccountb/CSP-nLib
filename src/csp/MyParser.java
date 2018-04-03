@@ -135,6 +135,15 @@ public class MyParser {
                         else if(args[k+1].equals("MWO")){
                             heuristicType= heuristicType.MWO;
                         }
+                        else if(args[k+1].equals("dLD")){
+                            heuristicType= heuristicType.dLD;
+                        }
+                        else if(args[k+1].equals("dDEG")){
+                            heuristicType= heuristicType.dDEG;
+                        }
+                        else if(args[k+1].equals("dDD")){
+                            heuristicType= heuristicType.dDD;
+                        }
                         else{
                             throw new java.lang.UnknownError("Wrong Heuristic Type");
                         }
@@ -150,6 +159,7 @@ public class MyParser {
                 //solve
                 solverReporter_bt result=null;
                 if(args[i+1].equals("BT")){
+                    problem.BTtype="BT";
                     result=S.solve_bt(Solver.SOLUTIONS_bt.BT,heuristicType);
                     System.out.print(result);
                     if(needWrite){
@@ -159,6 +169,7 @@ public class MyParser {
 
                 }
                 else if (args[i+1].equals("CBJ")){
+                    problem.BTtype="CBJ";
                     result=S.solve_bt(Solver.SOLUTIONS_bt.CBJ,heuristicType);
                     System.out.print(result);
                     if(needWrite){
@@ -167,7 +178,17 @@ public class MyParser {
                     }
                 }
                 else if (args[i+1].equals("FC")){
+                    problem.BTtype="FC";
                     result=S.solve_bt(Solver.SOLUTIONS_bt.FC,heuristicType);
+                    System.out.print(result);
+                    if(needWrite){
+                        result.writeToFile("solver_output.csv");
+                        result.writeToFileOrder("solver_output_ord.csv");
+                    }
+                }
+                else if (args[i+1].equals("FCCBJ")){
+                    problem.BTtype="FCCBJ";
+                    result=S.solve_bt(Solver.SOLUTIONS_bt.FCCBJ,heuristicType);
                     System.out.print(result);
                     if(needWrite){
                         result.writeToFile("solver_output.csv");
@@ -187,7 +208,8 @@ public class MyParser {
             S.init(problem);
             S.solve_ac(Solver.SOLUTIONS_ac.NC);
             S.AC_trim();
-            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.FC, heuristicType.LX);
+            problem.BTtype="FCCBJ";
+            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.FCCBJ, heuristicType.dDEG);
             result.writeToFile("solver_output.csv");
             result.writeToFileOrder("solver_output_ord.csv");
             System.out.println(result);

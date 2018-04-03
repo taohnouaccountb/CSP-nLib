@@ -6,48 +6,12 @@ import csp.tool.relatedJudge;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import csp.tool.bt.variableChooser.heuristicType;
 import java.util.stream.Collectors;
 
-public class staticVariableChooser {
+public class staticVariableChooser extends variableChooser{
 
-    private List<simpleVariable> refOrg = null;
-    public List<simpleVariable> li = null;
-    private relatedJudge isRelated = null;
+
     private int[] degreeCounts;
-
-    // Deprecated
-    private List<simpleVariable> getDegreeOrder(List<simpleVariable> li) {
-        degreeCounts = new int[li.size()];
-        for (int i = 0; i < li.size(); i++) degreeCounts[i] = -1;
-        List<simpleVariable> ret = new ArrayList<>();
-        ArrayList<simpleVariable> l = new ArrayList<>();
-        for (simpleVariable x : li) l.add(x);
-        while (!l.isEmpty()) {
-            int[] deg = new int[l.size()];
-            for (int i = 0; i < l.size(); i++) {
-                for (int j = 0; j < l.size(); j++) {
-                    if (i != j) {
-                        if (isRelated.isExist(l.get(i), l.get(j))) {
-                            deg[i]++;
-                        }
-                    }
-                }
-            }
-            int maxIndex = 0;
-            for (int i = 0; i < deg.length; i++) {
-                if (deg[i] == deg[maxIndex]) {
-                    maxIndex = l.get(i).getName().compareTo(l.get(maxIndex).getName()) < 0 ? i : maxIndex;
-                } else {
-                    maxIndex = deg[i] > deg[maxIndex] ? i : maxIndex;
-                }
-            }
-            degreeCounts[li.indexOf(l.get(maxIndex))] = deg[maxIndex];
-            ret.add(l.get(maxIndex));
-            l.remove(maxIndex);
-        }
-        return ret;
-    }
 
     private List<simpleVariable> getDegreeOrder2(List<simpleVariable> li) {
         degreeCounts = new int[li.size()];
@@ -108,7 +72,8 @@ public class staticVariableChooser {
         return rst;
     }
 
-    public staticVariableChooser(List<simpleVariable> orgLi, heuristicType mode, relatedJudge isRelated) {
+    public staticVariableChooser(List<simpleVariable> orgLi, heuristicType heu_mode, relatedJudge isRelated) {
+        super(orgLi,heu_mode,isRelated);
         refOrg = orgLi;
         this.isRelated = isRelated;
         if (mode == heuristicType.LX) {
@@ -139,19 +104,24 @@ public class staticVariableChooser {
         }
     }
 
-    public simpleVariable get(int i) {
-        return li.get(i);
+    @Override
+    public void next() {
+        return;
     }
 
-    public List<Integer> transSequence(int[] v) {
-        List<Integer> ret = new ArrayList<>();
-        for (simpleVariable i : refOrg) {
-            ret.add(v[li.indexOf(i)]);
+    @Override
+    public void back() {
+        return;
+    }
+
+    @Override
+    public List<simpleVariable> getUnusedVariables(int pos) {
+        List<simpleVariable> ret=new ArrayList<>();
+        for(int i=pos+1;i<li.size();i++){
+            ret.add(li.get(i));
         }
         return ret;
     }
 
-    public int getSize() {
-        return li.size();
-    }
+
 }
