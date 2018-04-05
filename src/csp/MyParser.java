@@ -12,6 +12,7 @@ import csp.data.*;
 import csp.io.sortPrint;
 import csp.tool.Solver;
 import csp.tool.bt.staticVariableChooser;
+import csp.tool.bt.variableChooser;
 import csp.tool.bt.variableChooser.heuristicType;
 import csp.tool.solverReporter_ac;
 import csp.tool.solverReporter_bt;
@@ -195,6 +196,15 @@ public class MyParser {
                         result.writeToFileOrder("solver_output_ord.csv");
                     }
                 }
+                else if(args[i+1].equals("MAC")){
+                    problem.BTtype="MAC";
+                    result=S.solve_bt(Solver.SOLUTIONS_bt.MAC,heuristicType);
+                    System.out.print(result);
+                    if(needWrite){
+                        result.writeToFile("solver_output.csv");
+                        result.writeToFileOrder("solver_output_ord.csv");
+                    }
+                }
                 else{
                     System.out.println("Wrong Parameter of '-s'");
                 }
@@ -208,8 +218,8 @@ public class MyParser {
             S.init(problem);
             S.solve_ac(Solver.SOLUTIONS_ac.NC);
             S.AC_trim();
-            problem.BTtype="FCCBJ";
-            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.FCCBJ, heuristicType.dDEG);
+            problem.BTtype="MAC";
+            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.MAC, variableChooser.heuristicType.dDD);
             result.writeToFile("solver_output.csv");
             result.writeToFileOrder("solver_output_ord.csv");
             System.out.println(result);

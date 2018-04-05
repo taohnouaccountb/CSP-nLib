@@ -29,15 +29,18 @@ abstract public class variableChooser {
     }
 
     public simpleVariable get(int i) {
+        if(i>count) throw new java.lang.UnknownError("INDEX EXCEEDED "+String.valueOf(i)+" "+String.valueOf(count));
         if(i>li.size()) throw new java.lang.UnknownError("WRONG INDEX");
         return li.get(i);
     }
 
     public int getCurSize() {
-        return li.size()-1;
+        return count;
+//        return li.size()-1;
     }
     public int getSize() {return refOrg.size(); }
 
+    protected int count=-1;
     public abstract void next();
     public abstract void back();
     public abstract List<simpleVariable> getUnusedVariables(int pos);

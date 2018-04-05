@@ -74,7 +74,8 @@ public class solverReporter_bt {
         column.add(String.valueOf(firstNv));
         column.add(String.valueOf(firstBt));
         column.add(String.valueOf(firstCpu));
-        column.add(String.valueOf(firstSolution));
+//        column.add(String.valueOf(firstSolution));
+        column.add(String.valueOf("[solution]"));
         column.add(String.valueOf(cc));
         column.add(String.valueOf(nv));
         column.add(String.valueOf(bt));

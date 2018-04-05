@@ -31,7 +31,7 @@ public class dynamicVariableChooser extends variableChooser{
 
     private simpleVariable dynamicGetNext(heuristicType mode){
         // Apply domino effect
-        List<simpleVariable> unused=getUnusedVariables(-1);
+        List<simpleVariable> unused=getUnusedVariables(-233);
         simpleVariable fastChoose=dynamicDomino(unused);
         if(fastChoose!=null){
             return fastChoose;
@@ -52,6 +52,7 @@ public class dynamicVariableChooser extends variableChooser{
 
     @Override
     public List<simpleVariable> getUnusedVariables(int pos){
+        if(pos!=count&&pos!=-233) throw new java.lang.UnknownError("WRONG INDEX");
         ArrayList<simpleVariable> pool=new ArrayList<>();
         for(simpleVariable i:refOrg){
             if(usedFlags.get(i)==null) throw new java.lang.UnknownError("UNKNOWN");
@@ -158,6 +159,7 @@ public class dynamicVariableChooser extends variableChooser{
     // Choose next variable and add it to the list
     @Override
     public void next(){
+        count++;
         if(getPos()+1>refOrg.size()){
             throw new java.lang.UnknownError("POS EXCEED LIMIT");
         }
@@ -169,6 +171,7 @@ public class dynamicVariableChooser extends variableChooser{
     // Discard the last variable
     @Override
     public void back(){
+        count--;
         usedFlags.replace(((LinkedList<simpleVariable>)li).getLast(),false);
         ((LinkedList<simpleVariable>)li).removeLast();
     }

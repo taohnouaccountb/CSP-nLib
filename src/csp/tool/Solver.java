@@ -240,7 +240,7 @@ public class Solver {
     private void AC3() throws NoSolutionException {
         Queue<solverSimpleVarPair> q = getInitQueue_queue();
         while (q.size() != 0) {
-            boolean isRevised = false;
+            boolean isRevised;
             solverSimpleVarPair i = q.poll();
             isRevised = revise(i.getA(), i.getB());
             if (isRevised) {
@@ -303,7 +303,7 @@ public class Solver {
     private int nv = 0;
     private int bt = 0;
 
-    public enum SOLUTIONS_bt {BT, CBJ, FC, FCCBJ}
+    public enum SOLUTIONS_bt {BT, CBJ, FC, FCCBJ, MAC}
 
     private List<List<Integer>> search_solutions = null;
     public solverReporter_bt solve_bt(SOLUTIONS_bt x, heuristicType var_heuristic) {
@@ -329,6 +329,8 @@ public class Solver {
             FC(var_heuristic);
         }else if(x==SOLUTIONS_bt.FCCBJ){
             FCCBJ(var_heuristic);
+        }else if(x==SOLUTIONS_bt.MAC){
+            MAC(var_heuristic);
         }
         else {
             System.out.println("ERROR: Solution not exist");
@@ -415,7 +417,6 @@ public class Solver {
             }
         }
     }
-
     private void CBJ(heuristicType mode){
         chooser = new staticVariableChooser(variables, mode, isRelated);
         int var_num = chooser.getSize();
@@ -493,7 +494,6 @@ public class Solver {
             }
         }
     }
-
     private void FC(heuristicType mode){
         boolean oneSolution=true;
         if(mode.name().startsWith("d")){
@@ -609,7 +609,6 @@ public class Solver {
             }
         }
     }
-
     private void FCCBJ(heuristicType mode){
         boolean oneSolution=false;
         if(mode.name().startsWith("d")){
@@ -751,6 +750,225 @@ public class Solver {
                     }
                 }*/
                 for(int i=0;i<ith-1;i++) chooser.get(ith-1).conf_set.add(chooser.get(i));
+                chooser.get(ith-1).getCurrent_domain().remove(Integer.valueOf(v[ith-1]));
+                consistent = !chooser.get(ith-1).getCurrent_domain().isEmpty();
+                ith--;
+                chooser.back();
+
+                if(oneSolution) break;
+            }
+        }
+    }
+
+
+    public boolean MACrevise(final simpleVariable a, final simpleVariable b) throws NoSolutionException {
+        List<Boolean> rst_flag = a.getCurrent_domain().stream().map(va -> support(a, va, b)).collect(Collectors.toList());
+        List<Integer> cut_counts = MACcutDomainByList(a.getCurrent_domain(), rst_flag);
+        a.reductionMAC.peek().addAll(cut_counts);
+        return cut_counts.size() > 0;
+    }
+    public List<Integer> MACcutDomainByList(LinkedList<Integer> target, List<Boolean> flag_list) throws NoSolutionException {
+        List<Integer> ret=new ArrayList<>();
+        Iterator<Integer> it = target.iterator();
+        assert target.size()==flag_list.size();
+        if (!flag_list.contains(true)) {
+            throw new NoSolutionException();
+        }
+        for (Boolean is_supported : flag_list) {
+            Integer x=it.next();
+            if (!is_supported) {
+                ret.add(x);
+                it.remove();
+                remove_counts++;
+            }
+        }
+
+        return ret;
+    }
+    private Stream<solverSimpleVarPair> MACgetInitQueue_stream(List<simpleVariable> unused) {
+        return constraints.stream().filter(i -> i.getArity() == 2)
+                .flatMap((i) -> {
+                    //Double the pairs
+                    simpleVariable a = findSimpleVariable.get(i.scope[0]);
+                    simpleVariable b = findSimpleVariable.get(i.scope[1]);
+                    if(!unused.contains(a)||!unused.contains(b)){
+                        return Stream.of();
+                    }
+                    return Stream.of(new solverSimpleVarPair(a, b), new solverSimpleVarPair(b, a));
+                }).distinct();
+    }
+    private Queue<solverSimpleVarPair> MACgetInitQueue_queue(List<simpleVariable> unused) {
+        Queue<solverSimpleVarPair> q = new ConcurrentLinkedQueue<>();
+        MACgetInitQueue_stream(unused).forEach(q::offer);
+        return q;
+    }
+    private void MAC(heuristicType mode){
+        boolean oneSolution=false;
+        if(mode.name().startsWith("d")){
+            variables.forEach(simpleVariable::initFC);
+            chooser = new dynamicVariableChooser(variables, mode, isRelated);
+        }
+        else{
+            chooser = new staticVariableChooser(variables, mode, isRelated);
+        }
+        int var_num = chooser.getSize();
+        int v[] = new int[var_num];
+
+        int ith=0;
+
+        boolean consistent=true;
+        while (ith > -1) {
+//            System.out.println(ith);
+            if(ith>chooser.getCurSize()) chooser.next();
+            simpleVariable cur = chooser.get(ith);
+
+            if (consistent) {
+                assert chooser.get(ith).future_fc.isEmpty();
+                //fc-label
+                assert(!cur.getCurrent_domain().isEmpty());
+                while (!cur.getCurrent_domain().isEmpty()) {
+                    v[ith] = cur.getCurrent_domain().getFirst();
+                    nv++;
+                    boolean findWipeout=false;
+                    List<simpleVariable> unused=chooser.getUnusedVariables(ith);
+                    for (int k = 0; !findWipeout && k < unused.size(); k++) {
+                        simpleVariable curr= unused.get(k);
+                        if (isRelated.isExist(cur,curr)) {
+                            //check-foward
+                            Set<Integer> new_reduction=new TreeSet<>();
+                            for(int m:curr.getCurrent_domain()){
+                                if(!check(cur, v[ith], curr, m)){
+                                    new_reduction.add(m);
+                                }
+                            }
+                            curr.getCurrent_domain().removeAll(new_reduction);
+                            if(!new_reduction.isEmpty()){
+                                curr.reduction.push(new_reduction);
+                                cur.future_fc.add(curr);
+                            }
+                        }
+                        if(curr.getCurrent_domain().isEmpty()){
+                            findWipeout=true;
+                            // undo-reductions
+                            for(simpleVariable m:cur.future_fc){
+                                Set<Integer> reduction = m.reduction.pop();
+                                m.getCurrent_domain().addAll(reduction);
+                            }
+                            cur.future_fc.clear();
+                        }
+                        else{
+                            findWipeout=false;
+                        }
+                    }
+                    if(!findWipeout){
+                        cur.pretendOne();
+                        // AC3 MAC-Special
+                        for(simpleVariable i:unused){
+                            i.reductionMAC.push(new ArrayList<>());
+                        }
+                        Queue<solverSimpleVarPair> q = MACgetInitQueue_queue(unused);
+                        for(solverSimpleVarPair i:q){
+                            for(int j=0;j<=ith;j++){
+                                assert i.getA()!=chooser.get(j)&&i.getB()!=chooser.get(j);
+                            }
+                        }
+                        while (q.size() != 0) {
+                            boolean isRevised=false;
+                            solverSimpleVarPair i = q.poll();
+                            try {
+                                isRevised = MACrevise(i.getA(), i.getB());
+                            } catch (NoSolutionException e) {
+                                findWipeout=true;
+                                break;
+                            }
+                            if (isRevised) {
+                                i.getA().getRefVar().constraints.parallelStream()
+                                        .filter(j -> j.getArity() == 2)
+                                        .flatMap(j -> Arrays.stream(j.scope))
+                                        .filter(j -> !j.getName().equals(i.getA().getName()) && !j.getName().equals(i.getB().getName()))
+                                        .map(j -> findSimpleVariable.get(j))
+                                        .filter(j->unused.contains(j))
+                                        .distinct()
+                                        .forEach((j) -> {
+                                            q.offer(new solverSimpleVarPair(j, i.getA()));
+                                        });
+                            }
+                        }
+                        if(findWipeout){
+                            // undo-reductions-plus
+                            for(simpleVariable i:unused){
+                                List<Integer> reductionMAC=i.reductionMAC.pop();
+                                i.getCurrent_domain().addAll(reductionMAC);
+                            }
+
+                            for(simpleVariable m:cur.future_fc){
+                                Set<Integer> reduction = m.reduction.pop();
+                                m.getCurrent_domain().addAll(reduction);
+                            }
+                            cur.future_fc.clear();
+                            // End
+                        }
+                        // End
+
+                        cur.pretendBack();
+                    }
+
+                    if (findWipeout) cur.getCurrent_domain().removeFirst();
+                    if (!findWipeout) break;
+                }
+                if(cur.getCurrent_domain().isEmpty()) consistent=false;
+                else consistent=true;
+                if (consistent) {
+                    ith++;
+                }
+            } else {
+                //fc-unlabel
+                bt++;
+                int h = ith - 1;
+                if(h==-1) break;
+                chooser.back();
+                // undo-reductions-plus
+                for(simpleVariable i:chooser.getUnusedVariables(h)){
+                    List<Integer> reductionMAC=i.reductionMAC.pop();
+                    i.getCurrent_domain().addAll(reductionMAC);
+                }
+
+                for(simpleVariable m:chooser.get(h).future_fc){
+                    Set<Integer> reduction = m.reduction.pop();
+                    m.getCurrent_domain().addAll(reduction);
+                }
+                chooser.get(h).future_fc.clear();
+                // End
+
+                //update-current-domain-plus
+                cur.restore();
+                for(Set<Integer> m:cur.reduction){
+                    cur.getCurrent_domain().removeAll(m);
+                }
+                for(List<Integer> m:cur.reductionMAC){
+                    cur.getCurrent_domain().removeAll(m);
+                }
+
+                chooser.get(h).getCurrent_domain().remove(Integer.valueOf(v[h]));
+                consistent = !chooser.get(h).getCurrent_domain().isEmpty();
+                ith = h;
+            }
+            if (ith == var_num) {
+                if (search_solutions.isEmpty()) {
+                    firstBt = bt;
+                    firstCc = check_counts;
+                    firstNv = nv;
+                    firstTime = System.nanoTime();
+                }
+
+                search_solutions.add(chooser.transSequence(v));
+
+/*                for(int i=0;i<ith;i++){
+                    for(int j=0;j<i;j++){
+                        assert(check(chooser.get(i),v[i],chooser.get(j),v[j]));
+                    }
+                }*/
+
                 chooser.get(ith-1).getCurrent_domain().remove(Integer.valueOf(v[ith-1]));
                 consistent = !chooser.get(ith-1).getCurrent_domain().isEmpty();
                 ith--;
