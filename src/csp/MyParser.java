@@ -212,14 +212,14 @@ public class MyParser {
         }
         if(!validArg){
             //Default
-            parser = new MyParser("./data-zebra.xml");
+            parser = new MyParser("./08208.xml");
             file_name="data";
             Solver S=new Solver();
             S.init(problem);
             S.solve_ac(Solver.SOLUTIONS_ac.NC);
             S.AC_trim();
             problem.BTtype="MAC";
-            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.MAC, variableChooser.heuristicType.dDD);
+            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.FCCBJ, variableChooser.heuristicType.dLD);
             result.writeToFile("solver_output.csv");
             result.writeToFileOrder("solver_output_ord.csv");
             System.out.println(result);

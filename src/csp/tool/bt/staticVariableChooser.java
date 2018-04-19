@@ -118,9 +118,6 @@ public class staticVariableChooser extends variableChooser{
 
     @Override
     public List<simpleVariable> getUnusedVariables(int pos) {
-        if(pos!=count){
-            throw new java.util.UnknownFormatConversionException("WRONG POS FOR UNUSED");
-        }
         List<simpleVariable> ret=new ArrayList<>();
         for(int i=pos+1;i<li.size();i++){
             ret.add(li.get(i));

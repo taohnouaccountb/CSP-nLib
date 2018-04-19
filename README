@@ -10,7 +10,7 @@ NUID:09157432
 	-f [filename]: The URL of the xcsp file.
 	-r write the output to './solver_output.csv'
 	-a [ac1|ac3|ac2001|nc]
-	-s [BT|CBJ]
+	-s [BT|CBJ|FC|FCCBJ]
 	-u [LX|LD|DEG|DD|MWO|dDD|dDEG|dLD]
 
 ### HW1
@@ -58,3 +58,7 @@ Observation: Dynamic ordering heuristic is significantly better than static orde
 
 ### HW6 Checkpoint1
 Finished FC-CBJ and WMO variable heuristic.
+
+### HW6 
+Fixed bugs in FC-CBJ.
+Comparing results are in the excel on cse-wiki.

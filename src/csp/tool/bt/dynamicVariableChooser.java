@@ -135,7 +135,7 @@ public class dynamicVariableChooser extends variableChooser{
     }
 
     private simpleVariable dLD(){
-        List<simpleVariable> unused=getUnusedVariables(-1);
+        List<simpleVariable> unused=getUnusedVariables(-233);
         // Choose the variable has least domain size
         int least_index=0;
         for(int i=1;i<unused.size();i++){

@@ -44,6 +44,20 @@ public class solverReporter_bt {
     private String variable_order_heuristic;
     private variableChooser chooser;
 
+    private String print_list(List<Integer> li) {
+        String x = "[";
+        boolean first = true;
+        for (int i : li) {
+            if (first) {
+                x = x + String.valueOf(i);
+                first = false;
+            } else {
+                x = x + " " + String.valueOf(i);
+            }
+        }
+        return x+"]";
+    }
+
     public solverReporter_bt(variableChooser chooser, String name, String BTtype, String variable_order_heuristic, String var_static_dynamic, String value_order_heuristic, String val_static_dynamic, int firstCc, int firstNv, int firstBt, long firstCpu, List<Integer> firstSolution, int cc, int nv, int bt, long cpu, int solutionNumbers) {
         if (variable_order_heuristic.equals("LX")) {
             variable_order_heuristic = "1 LX";
@@ -74,8 +88,8 @@ public class solverReporter_bt {
         column.add(String.valueOf(firstNv));
         column.add(String.valueOf(firstBt));
         column.add(String.valueOf(firstCpu));
-//        column.add(String.valueOf(firstSolution));
-        column.add(String.valueOf("[solution]"));
+        column.add(String.valueOf(print_list(firstSolution)));
+//        column.add(String.valueOf("[solution]"));
         column.add(String.valueOf(cc));
         column.add(String.valueOf(nv));
         column.add(String.valueOf(bt));
@@ -88,7 +102,6 @@ public class solverReporter_bt {
             Writer writer = new FileWriter(addr, true);
             String line = file_name;
             for (int i = 0; i < column.size(); i++) {
-                if (i == 9) continue;
                 line += ", " + column.get(i);
             }
             line += "\n";

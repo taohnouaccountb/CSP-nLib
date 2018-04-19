@@ -29,12 +29,17 @@ abstract public class variableChooser {
     }
 
     public simpleVariable get(int i) {
-        if(i>count) throw new java.lang.UnknownError("INDEX EXCEEDED "+String.valueOf(i)+" "+String.valueOf(count));
-        if(i>li.size()) throw new java.lang.UnknownError("WRONG INDEX");
+        if(this instanceof dynamicVariableChooser){
+            if(i>count) throw new java.lang.UnknownError("INDEX EXCEEDED "+String.valueOf(i)+" "+String.valueOf(count));
+            if(i>li.size()) throw new java.lang.UnknownError("WRONG INDEX");
+        }
         return li.get(i);
     }
 
     public int getCurSize() {
+        if (this instanceof dynamicVariableChooser){
+            assert(count==li.size()-1);
+        }
         return count;
 //        return li.size()-1;
     }

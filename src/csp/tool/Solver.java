@@ -184,7 +184,6 @@ public class Solver {
         return cut_counts > 0;
     }
 
-
     private Stream<solverSimpleVarPair> getInitQueue_stream() {
         return constraints.stream().filter(i -> i.getArity() == 2)
                 .flatMap((i) -> {
@@ -495,7 +494,7 @@ public class Solver {
         }
     }
     private void FC(heuristicType mode){
-        boolean oneSolution=true;
+        boolean oneSolution=false;
         if(mode.name().startsWith("d")){
             variables.forEach(simpleVariable::initFC);
             chooser = new dynamicVariableChooser(variables, mode, isRelated);
@@ -591,7 +590,6 @@ public class Solver {
                     firstNv = nv;
                     firstTime = System.nanoTime();
                 }
-
                 search_solutions.add(chooser.transSequence(v));
 
 /*                for(int i=0;i<ith;i++){
@@ -625,7 +623,7 @@ public class Solver {
 
         boolean consistent=true;
         while (ith > -1) {
-//            System.out.println(ith);
+            assert ith==chooser.getCurSize()||ith==chooser.getCurSize()+1;
             if(ith>chooser.getCurSize()) chooser.next();
             simpleVariable cur = chooser.get(ith);
 
@@ -655,6 +653,7 @@ public class Solver {
                                 curr.past_fc.add(cur);
                             }
                         }
+
                         if(curr.getCurrent_domain().isEmpty()){
                             findWipeout=true;
 
@@ -662,11 +661,12 @@ public class Solver {
                             for(simpleVariable m:cur.future_fc){
                                 Set<Integer> reduction = m.reduction.pop();
                                 m.getCurrent_domain().addAll(reduction);
+                                assert m.past_fc.getLast()==cur;
                                 m.past_fc.removeLast();
                             }
                             cur.future_fc.clear();
-                            // undo-reductions End
-
+                            // End
+                            assert curr.conf_set.isEmpty();
                             cur.conf_set.addAll(curr.past_fc);
                             assert !cur.conf_set.contains(cur);
                         }
@@ -695,9 +695,9 @@ public class Solver {
                 H.conf_set.addAll(cur.conf_set);
                 H.conf_set.addAll(cur.past_fc);
                 H.conf_set.remove(H);
-                assert !H.conf_set.contains(H);
 
                 for(int j=ith; j>=h+1; j--){
+                    assert chooser.getCurSize()==j;
                     simpleVariable curr=chooser.get(j);
 
                     curr.conf_set.clear();
@@ -706,6 +706,7 @@ public class Solver {
                     for(simpleVariable m:curr.future_fc){
                         Set<Integer> reduction = m.reduction.pop();
                         m.getCurrent_domain().addAll(reduction);
+                        assert m.past_fc.getLast()==cur;
                         m.past_fc.removeLast();
                     }
                     curr.future_fc.clear();
@@ -725,6 +726,7 @@ public class Solver {
                 for(simpleVariable m:H.future_fc){
                     Set<Integer> reduction = m.reduction.pop();
                     m.getCurrent_domain().addAll(reduction);
+                    assert m.past_fc.getLast()==cur;
                     m.past_fc.removeLast();
                 }
                 H.future_fc.clear();
@@ -744,16 +746,15 @@ public class Solver {
 
                 search_solutions.add(chooser.transSequence(v));
 
-/*                for(int i=0;i<ith;i++){
-                    for(int j=0;j<i;j++){
-                        assert(check(chooser.get(i),v[i],chooser.get(j),v[j]));
-                    }
-                }*/
+//                for(int i=0;i<ith;i++){
+//                    for(int j=0;j<i;j++){
+//                        assert(check(chooser.get(i),v[i],chooser.get(j),v[j]));
+//                    }
+//                }
                 for(int i=0;i<ith-1;i++) chooser.get(ith-1).conf_set.add(chooser.get(i));
                 chooser.get(ith-1).getCurrent_domain().remove(Integer.valueOf(v[ith-1]));
                 consistent = !chooser.get(ith-1).getCurrent_domain().isEmpty();
                 ith--;
-                chooser.back();
 
                 if(oneSolution) break;
             }

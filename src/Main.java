@@ -9,8 +9,13 @@ import java.util.*;
 public class Main {
 
     public static void main(String[] args) {
-        Map<Integer,Boolean> a=new HashMap<>();
-        System.out.println(a.get(0));
+       Stack<Integer> s=new Stack<>();
+       s.push(1);
+       s.push(2);
+       s.push(3);
+       for(Integer i :s){
+           System.out.println(i);
+       }
     }
 
 }
