@@ -145,7 +145,11 @@ public class MyParser {
                         else if(args[k+1].equals("dDD")){
                             heuristicType= heuristicType.dDD;
                         }
+                        else if(args[k+1].equals("dDwD")){
+                            heuristicType= heuristicType.dDwD;
+                        }
                         else{
+                            System.out.println(args[k+1]);
                             throw new java.lang.UnknownError("Wrong Heuristic Type");
                         }
                         break;
@@ -212,14 +216,14 @@ public class MyParser {
         }
         if(!validArg){
             //Default
-            parser = new MyParser("./08208.xml");
+            parser = new MyParser("./17d.xml");
             file_name="data";
             Solver S=new Solver();
             S.init(problem);
             S.solve_ac(Solver.SOLUTIONS_ac.NC);
             S.AC_trim();
             problem.BTtype="MAC";
-            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.FCCBJ, variableChooser.heuristicType.dLD);
+            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.MAC, variableChooser.heuristicType.dDD);
             result.writeToFile("solver_output.csv");
             result.writeToFileOrder("solver_output_ord.csv");
             System.out.println(result);

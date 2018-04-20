@@ -75,6 +75,8 @@ public class solverReporter_bt {
             variable_order_heuristic = "7 dDEG";
         } else if (variable_order_heuristic.equals("dDD")) {
             variable_order_heuristic = "8 dDD";
+        } else if (variable_order_heuristic.equals("dDwD")) {
+            variable_order_heuristic = "9 dDwD";
         }
         this.variable_order_heuristic = variable_order_heuristic;
         this.chooser = chooser;

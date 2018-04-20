@@ -1,5 +1,6 @@
 package csp.tool.bt;
 
+import csp.data.Constraint;
 import csp.data.simpleVariable;
 import csp.tool.relatedJudge;
 
@@ -44,6 +45,9 @@ public class dynamicVariableChooser extends variableChooser{
         }
         else if (mode==heuristicType.dDEG){
             return getDegreeOrder2s(unused);
+        }
+        else if (mode==heuristicType.dDwD){
+            return getDegreeOrder2plusX(unused);
         }
         else{
             throw new java.lang.UnknownError("UNKNOWN DYNAMIC HEURISTIC TYPE");
@@ -120,6 +124,39 @@ public class dynamicVariableChooser extends variableChooser{
         }
 
         // Select the variable has smallest 'dom/deg'
+        int least_index=0;
+        for(int i=1;i<list.size();i++){
+            double len_i = list.get(i).getCurrent_domain().size()*1.0/degreeCounts[i];
+            double len_least = list.get(least_index).getCurrent_domain().size()*1.0/degreeCounts[least_index];
+            if(len_i==len_least&&list.get(i).getName().compareTo(list.get(least_index).getName())<0){
+                least_index=i;
+            }
+            else if(len_i<len_least){
+                least_index=i;
+            }
+        }
+        return list.get(least_index);
+    }
+
+    private simpleVariable getDegreeOrder2plusX(List<simpleVariable> list) {
+        // Initialize
+        int[] degreeCounts = new int[list.size()];
+        ArrayList<simpleVariable> l = new ArrayList<>();
+        for (simpleVariable x : list) l.add(x);
+        l.forEach(i -> i.deg = 0);
+
+
+        // Count weight-degrees
+        for(simpleVariable i: list){
+            int sum=0;
+            for(Constraint j: i.getRefVar().constraints){
+                if(j.getArity()!=2) continue;
+                sum+=j.wdeg;
+            }
+            i.deg=sum;
+        }
+
+        // Select the variable has smallest 'dom/wdeg'
         int least_index=0;
         for(int i=1;i<list.size();i++){
             double len_i = list.get(i).getCurrent_domain().size()*1.0/degreeCounts[i];

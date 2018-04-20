@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 abstract public class variableChooser {
-    public enum heuristicType {LX, LD, DEG, UU, DD, MWO, dLD, dDEG, dDD}
+    public enum heuristicType {LX, LD, DEG, UU, DD, MWO, dLD, dDEG, dDD, dDwD}
     protected List<simpleVariable> refOrg = null;
     protected relatedJudge isRelated = null;
     protected heuristicType mode;
