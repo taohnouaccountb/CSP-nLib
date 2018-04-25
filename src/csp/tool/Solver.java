@@ -15,9 +15,10 @@ import csp.tool.bt.staticVariableChooser;
 import csp.tool.bt.variableChooser;
 import csp.tool.bt.variableChooser.heuristicType;
 
+import java.util.concurrent.ThreadLocalRandom;
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -236,6 +237,53 @@ public class Solver {
         }
     }
 
+    private void AC3() throws NoSolutionException {
+        Queue<solverSimpleVarPair> q = getInitQueue_queue();
+        while (q.size() != 0) {
+            boolean isRevised;
+            solverSimpleVarPair i = q.poll();
+            isRevised = revise(i.getA(), i.getB());
+            if (isRevised) {
+                i.getA().getRefVar().constraints.parallelStream()
+                        .filter(j -> j.getArity() == 2)
+                        .flatMap(j -> Arrays.stream(j.scope))
+                        .filter(j -> !j.getName().equals(i.getA().getName()) && !j.getName().equals(i.getB().getName()))
+                        .map(j -> findSimpleVariable.get(j))
+                        .distinct()
+                        .forEach((j) -> {
+                            q.offer(new solverSimpleVarPair(j, i.getA()));
+                        });
+            }
+        }
+    }
+
+    private void AC2001() throws NoSolutionException {
+        List<solverSimpleVarPair> l = getInitQueue_list();
+        ac2001Track = new HashMap<>();
+        for (solverSimpleVarPair i : l) {
+            ac2001Track.putIfAbsent(i.getA(), new HashMap<>());
+            ac2001Track.get(i.getA()).putIfAbsent(i.getB(), new HashMap<>());
+        }
+
+        ac2001_enable = true;
+        AC3();
+        ac2001_enable = false;
+
+    }
+
+    private void AC1() throws NoSolutionException {
+        List<solverSimpleVarPair> q = getInitQueue_list();
+        boolean revised = true;
+        while (revised) {
+            revised = false;
+            for (int k = 0; k < q.size(); k++) {
+                solverSimpleVarPair i = q.get(k);
+                boolean x = revise(i.getA(), i.getB());
+                revised = x || revised;
+            }
+        }
+    }
+
     private void NC() throws NoSolutionException {
         for (simpleVariable i : variables) {
             List<Boolean> rst_flag = i.getCurrent_domain().stream().map(j -> check(i, j))
@@ -255,7 +303,7 @@ public class Solver {
     private int nv = 0;
     private int bt = 0;
 
-    public enum SOLUTIONS_bt {FC, MAC}
+    public enum SOLUTIONS_bt {BT, CBJ, FC, FCCBJ, MAC}
 
     private List<List<Integer>> search_solutions = null;
 
@@ -274,8 +322,14 @@ public class Solver {
             System.out.println("ERROR: Problem Uninitialized");
         }
 
-        if (x == SOLUTIONS_bt.FC) {
+        if (x == SOLUTIONS_bt.BT) {
+            BT(var_heuristic);
+        } else if (x == SOLUTIONS_bt.CBJ) {
+            CBJ(var_heuristic);
+        } else if (x == SOLUTIONS_bt.FC) {
             FC(var_heuristic);
+        } else if (x == SOLUTIONS_bt.FCCBJ) {
+            FCCBJ(var_heuristic);
         } else if (x == SOLUTIONS_bt.MAC) {
             MAC(var_heuristic);
         } else {
@@ -301,6 +355,147 @@ public class Solver {
 
     private relatedJudge isRelated = null;
     private variableChooser chooser;
+
+    private void BT(heuristicType mode) {
+        chooser = new staticVariableChooser(variables, mode, isRelated);
+        int var_num = chooser.getSize();
+        int v[] = new int[var_num];
+
+        boolean consistent = true;
+        int ith = 0;
+        //search
+        while (ith > -1) {
+            simpleVariable cur = chooser.get(ith);
+            if (consistent) {
+                //bt-label
+                assert (!cur.getCurrent_domain().isEmpty());
+                while (!cur.getCurrent_domain().isEmpty()) {
+                    v[ith] = cur.getCurrent_domain().getFirst();
+                    nv++;
+                    boolean findConflict = false;
+                    for (int k = 0; !findConflict && k < ith; k++) {
+                        if (isRelated.isExist(cur, chooser.get(k))) {
+                            findConflict = !check(cur, v[ith], chooser.get(k), v[k]);
+                        }
+                    }
+                    if (findConflict) cur.getCurrent_domain().removeFirst();
+                    if (!findConflict) break;
+                }
+                if (cur.getCurrent_domain().isEmpty()) consistent = false;
+                else consistent = true;
+
+                if (consistent) {
+                    ith++;
+                }
+            } else {
+                //bt-unlabel
+                bt++;
+                int h = ith - 1;
+                if (h == -1) break;
+                chooser.get(ith).restore();
+                chooser.get(h).getCurrent_domain().remove(Integer.valueOf(v[h]));
+                consistent = !chooser.get(h).getCurrent_domain().isEmpty();
+                ith = h;
+            }
+            if (ith >= var_num) {
+                if (search_solutions.isEmpty()) {
+                    firstBt = bt;
+                    firstCc = check_counts;
+                    firstNv = nv;
+                    firstTime = System.nanoTime();
+                }
+                search_solutions.add(chooser.transSequence(v));
+
+/*                for(int i=0;i<ith;i++){
+                    for(int j=0;j<i;j++){
+                        assert(check(chooser.get(i),v[i],chooser.get(j),v[j]));
+                    }
+                }*/
+
+                chooser.get(ith - 1).getCurrent_domain().remove(Integer.valueOf(v[ith - 1]));
+                consistent = !chooser.get(ith - 1).getCurrent_domain().isEmpty();
+                ith--;
+            }
+        }
+    }
+
+    private void CBJ(heuristicType mode) {
+        chooser = new staticVariableChooser(variables, mode, isRelated);
+        int var_num = chooser.getSize();
+        int v[] = new int[var_num];
+        Set<Integer> conf_set[] = new TreeSet[var_num];
+        for (int i = 0; i < conf_set.length; i++) {
+            conf_set[i] = new TreeSet<>();
+            conf_set[i].add(-1);
+        }
+        boolean consistent = true;
+        int ith = 0;
+        //search
+        while (ith >= 0) {
+//            System.out.println(ith);
+//            if(ith==0) System.out.println("XX");
+            simpleVariable cur = chooser.get(ith);
+            if (consistent) {
+                //bt-label
+                assert (!cur.getCurrent_domain().isEmpty());
+                while (!cur.getCurrent_domain().isEmpty()) {
+                    v[ith] = cur.getCurrent_domain().getFirst();
+                    assert (check(cur, v[ith], chooser.get(0), v[0]));
+
+                    nv++;
+                    boolean findConflict = false;
+                    int k;
+                    for (k = 0; !findConflict && k < ith; k++) {
+                        if (isRelated.isExist(cur, chooser.get(k))) {
+                            findConflict = !check(cur, v[ith], chooser.get(k), v[k]);
+                        }
+                    }
+                    if (findConflict) {
+                        conf_set[ith].add(k - 1);
+                        cur.getCurrent_domain().removeFirst();
+                    }
+                    if (!findConflict) break;
+                }
+                if (cur.getCurrent_domain().isEmpty()) consistent = false;
+                else consistent = true;
+
+                if (consistent) {
+                    ith++;
+                }
+            } else {
+                //bt-unlabel
+                bt++;
+                int h = conf_set[ith].stream().max(Integer::compareTo).get();
+                if (h < 0) break;
+
+                conf_set[h].addAll(conf_set[ith]);
+                conf_set[h].remove(Integer.valueOf(h));
+                for (int j = h + 1; j <= ith; j++) {
+                    conf_set[j].clear();
+                    conf_set[j].add(-1);
+                    chooser.get(j).restore();
+                }
+                chooser.get(h).getCurrent_domain().remove(Integer.valueOf(v[h]));
+                consistent = !chooser.get(h).getCurrent_domain().isEmpty();
+                ith = h;
+            }
+            if (ith >= var_num) {
+                if (search_solutions.isEmpty()) {
+                    firstBt = bt;
+                    firstCc = check_counts;
+                    firstNv = nv;
+                    firstTime = System.nanoTime();
+                }
+                search_solutions.add(chooser.transSequence(v));
+
+                for (int i = 0; i < ith - 1; i++) conf_set[ith - 1].add(i);
+
+                chooser.get(ith - 1).getCurrent_domain().remove(Integer.valueOf(v[ith - 1]));
+                consistent = !chooser.get(ith - 1).getCurrent_domain().isEmpty();
+                ith--;
+            }
+        }
+    }
 
     private void FC(heuristicType mode) {
         boolean oneSolution = true;
@@ -418,10 +613,200 @@ public class Solver {
         }
     }
 
-    // TODO Check if necessary
+    private void FCCBJ(heuristicType mode) {
+        boolean oneSolution = false;
+        if (mode.name().startsWith("d")) {
+            variables.forEach(simpleVariable::initFC);
+            chooser = new dynamicVariableChooser(variables, mode, isRelated);
+        } else {
+            chooser = new staticVariableChooser(variables, mode, isRelated);
+        }
+        int var_num = chooser.getSize();
+        int v[] = new int[var_num];
+
+        int ith = 0;
+
+        boolean consistent = true;
+        while (ith > -1) {
+            assert ith == chooser.getCurSize() || ith == chooser.getCurSize() + 1;
+            if (ith > chooser.getCurSize()) chooser.next();
+            simpleVariable cur = chooser.get(ith);
+
+            if (consistent) {
+                assert chooser.get(ith).future_fc.isEmpty();
+                //fc-cbj-label
+                assert (!cur.getCurrent_domain().isEmpty());
+                while (!cur.getCurrent_domain().isEmpty()) {
+                    v[ith] = cur.getCurrent_domain().getFirst();
+                    nv++;
+                    boolean findWipeout = false;
+                    List<simpleVariable> unused = chooser.getUnusedVariables(ith);
+                    for (int k = 0; !findWipeout && k < unused.size(); k++) {
+                        simpleVariable curr = unused.get(k);
+                        if (isRelated.isExist(cur, curr)) {
+                            //check-foward
+                            Set<Integer> new_reduction = new TreeSet<>();
+                            for (int m : curr.getCurrent_domain()) {
+                                if (!check(cur, v[ith], curr, m)) {
+                                    new_reduction.add(m);
+                                }
+                            }
+                            curr.getCurrent_domain().removeAll(new_reduction);
+                            if (!new_reduction.isEmpty()) {
+                                curr.reduction.push(new_reduction);
+                                cur.future_fc.add(curr);
+                                curr.past_fc.add(cur);
+                            }
+                        }
+
+                        if (curr.getCurrent_domain().isEmpty()) {
+                            findWipeout = true;
+
+                            // undo-reductions Start
+                            for (simpleVariable m : cur.future_fc) {
+                                Set<Integer> reduction = m.reduction.pop();
+                                m.getCurrent_domain().addAll(reduction);
+                                assert m.past_fc.getLast() == cur;
+                                m.past_fc.removeLast();
+                            }
+                            cur.future_fc.clear();
+                            // End
+                            assert curr.conf_set.isEmpty();
+                            cur.conf_set.addAll(curr.past_fc);
+                            assert !cur.conf_set.contains(cur);
+                        } else {
+                            findWipeout = false;
+                        }
+                    }
+                    if (findWipeout) cur.getCurrent_domain().removeFirst();
+                    if (!findWipeout) break;
+                }
+                if (cur.getCurrent_domain().isEmpty()) consistent = false;
+                else consistent = true;
+                if (consistent) {
+                    ith++;
+                }
+            } else {
+                //fc-cbj-unlabel
+                bt++;
+                int h = ith - 1;
+                while (h >= 0 && !cur.conf_set.contains(chooser.get(h)) && !cur.past_fc.contains(chooser.get(h))) {
+                    h--;
+                }
+                if (h == -1) break;
+
+                simpleVariable H = chooser.get(h);
+                H.conf_set.addAll(cur.conf_set);
+                H.conf_set.addAll(cur.past_fc);
+                H.conf_set.remove(H);
+
+                for (int j = ith; j >= h + 1; j--) {
+                    assert chooser.getCurSize() == j;
+                    simpleVariable curr = chooser.get(j);
+
+                    curr.conf_set.clear();
+
+                    // undo-reductions(J) Start
+                    for (simpleVariable m : curr.future_fc) {
+                        Set<Integer> reduction = m.reduction.pop();
+                        m.getCurrent_domain().addAll(reduction);
+                        assert m.past_fc.getLast() == cur;
+                        m.past_fc.removeLast();
+                    }
+                    curr.future_fc.clear();
+                    // End
+
+                    // update-current-domain J
+                    curr.restore();
+                    for (Set<Integer> m : curr.reduction) {
+                        curr.getCurrent_domain().removeAll(m);
+                    }
+                    // End
+
+                    chooser.back();
+                }
+
+                // undo-reductions(H)
+                for (simpleVariable m : H.future_fc) {
+                    Set<Integer> reduction = m.reduction.pop();
+                    m.getCurrent_domain().addAll(reduction);
+                    assert m.past_fc.getLast() == cur;
+                    m.past_fc.removeLast();
+                }
+                H.future_fc.clear();
+                // undo end
+
+                H.getCurrent_domain().remove(Integer.valueOf(v[h]));
+                consistent = !H.getCurrent_domain().isEmpty();
+                ith = h;
+            }
+            if (ith == var_num) {
+                if (search_solutions.isEmpty()) {
+                    firstBt = bt;
+                    firstCc = check_counts;
+                    firstNv = nv;
+                    firstTime = System.nanoTime();
+                }
+
+                search_solutions.add(chooser.transSequence(v));
+
+//                for(int i=0;i<ith;i++){
+//                    for(int j=0;j<i;j++){
+//                        assert(check(chooser.get(i),v[i],chooser.get(j),v[j]));
+//                    }
+//                }
+                for (int i = 0; i < ith - 1; i++) chooser.get(ith - 1).conf_set.add(chooser.get(i));
+                chooser.get(ith - 1).getCurrent_domain().remove(Integer.valueOf(v[ith - 1]));
+                consistent = !chooser.get(ith - 1).getCurrent_domain().isEmpty();
+                ith--;
+
+                if (oneSolution) break;
+            }
+        }
+    }
+
     static public boolean constraintInSimpleVariableList(Constraint c, List<simpleVariable> li){
         List<Variable> list = li.stream().map(simpleVariable::getRefVar).collect(Collectors.toList());
         return list.contains(c.scope[0]) && list.contains(c.scope[1]);
+    }
+    private Constraint findConflictReason(simpleVariable a, simpleVariable b, int value){
+        Variable A=a.getRefVar();
+        ArrayList<Constraint> pool = new ArrayList<>();
+        for(Constraint i:A.constraints){
+            if(i.getArity()!=2) continue;
+            if(!i.scope[0].getName().equals(b.getName())&&!i.scope[1].getName().equals(b.getName())) continue;
+            boolean findSupport = false;
+            for(int j:b.getCurrent_domain()){
+                if (i.scope[0].getName().equals(a.getName()) && i.scope[1].getName().equals(b.getName())) {
+                    int[] tuple = {value, j};
+                    try {
+                        if(i.check(tuple)){
+                            findSupport=true;
+                            break;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else if (i.scope[1].getName().equals(a.getName()) && i.scope[0].getName().equals(b.getName())) {
+                    int[] tuple = {j, value};
+                    try {
+                        if(i.check(tuple)){
+                            findSupport=true;
+                            break;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            if(!findSupport){
+                pool.add(i);
+            }
+        }
+        if(pool.isEmpty()){
+            throw new java.lang.UnknownError("EXCEPT NONE");
+        }
+        return pool.get(ThreadLocalRandom.current().nextInt(0,pool.size()));
     }
 
     public boolean MACrevise(final simpleVariable a, final simpleVariable b,List<simpleVariable>unused) throws NoSolutionException {

@@ -142,6 +142,10 @@ public class dynamicVariableChooser extends variableChooser{
     private simpleVariable getDegreeOrder2plusX(List<simpleVariable> list) {
         // Initialize
         int[] degreeCounts = new int[list.size()];
+        ArrayList<simpleVariable> l = new ArrayList<>();
+        for (simpleVariable x : list) l.add(x);
+        l.forEach(i -> i.deg = 0);
+
 
         // Count weight-degrees
         for(simpleVariable i: list){
@@ -150,6 +154,7 @@ public class dynamicVariableChooser extends variableChooser{
                 if(j.getArity()!=2) continue;
                 boolean flag= Solver.constraintInSimpleVariableList(j,getUnusedVariables(-233));
                 if(!flag) {
+//                    System.out.println("YES");
                     continue;
                 }
                 sum+=j.wdeg;
