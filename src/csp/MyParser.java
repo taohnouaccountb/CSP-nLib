@@ -87,7 +87,8 @@ public class MyParser {
                     System.out.println("ERROR: Multiple '-f' detected.");
                     break;
                 }
-                file_name=args[i+1].substring(args[i+1].lastIndexOf("\\")+1,args[i+1].length()-5);
+//                file_name=args[i+1].substring(args[i+1].lastIndexOf("\\")+1,args[i+1].length()-5);
+                file_name=args[i+1];
                 parser = new MyParser(args[i+1]);
             }
             else if(args[i].equals("-a")){
@@ -216,14 +217,14 @@ public class MyParser {
         }
         if(!validArg){
             //Default
-            parser = new MyParser("./17d.xml");
+            parser = new MyParser("./zebra.xml");
             file_name="data";
             Solver S=new Solver();
             S.init(problem);
             S.solve_ac(Solver.SOLUTIONS_ac.NC);
             S.AC_trim();
             problem.BTtype="MAC";
-            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.MAC, variableChooser.heuristicType.dDD);
+            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.MAC, variableChooser.heuristicType.dDwD);
             result.writeToFile("solver_output.csv");
             result.writeToFileOrder("solver_output_ord.csv");
             System.out.println(result);
