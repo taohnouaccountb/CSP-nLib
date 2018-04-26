@@ -17,19 +17,12 @@ import static java.lang.String.format;
 public class solverReporter_ac {
 
     private String name;
-
     private String cc;
-
     private String cpu;
-
     private String fval;
-
     private String iSize;
-
     private String fSize;
-
     private String fEffect;
-
     private String file_name;
 
     public solverReporter_ac(String file_name, String name, int cc, long cpu, long fval, double iSize, double fSize, double fEffect) {

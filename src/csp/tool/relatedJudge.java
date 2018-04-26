@@ -11,6 +11,7 @@ public class relatedJudge {
     public relatedJudge(Stream<solverSimpleVarPair> ss){
         relatedMark = ss.collect(Collectors.toSet());
     }
+
     public boolean isExist(simpleVariable a, simpleVariable b){
         return relatedMark.contains(new solverSimpleVarPair(a,b));
     }

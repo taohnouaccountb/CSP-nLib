@@ -11,11 +11,13 @@ import abscon.instance.tools.InstanceParser;
 import csp.data.*;
 import csp.io.sortPrint;
 import csp.tool.Solver;
+import csp.tool.Solver_MAC;
 import csp.tool.bt.staticVariableChooser;
 import csp.tool.bt.variableChooser;
 import csp.tool.bt.variableChooser.heuristicType;
 import csp.tool.solverReporter_ac;
 import csp.tool.solverReporter_bt;
+import org.omg.CORBA.portable.UnknownException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -91,140 +93,92 @@ public class MyParser {
                 file_name=args[i+1];
                 parser = new MyParser(args[i+1]);
             }
-            else if(args[i].equals("-a")){
-                validArg=true;
-                if(parser==null){
-                    System.out.println("ERROR: '-f' should be the first argument.");
-                    break;
-                }
-
-                //Preprocess
-                Solver S=new Solver();
-                S.init(problem);
-                S.solve_ac(Solver.SOLUTIONS_ac.NC);
-
-                //Solve
-                solverReporter_ac result=null;
-                if(args[i+1].equals("ac1")){
-                    result=S.solve_ac(Solver.SOLUTIONS_ac.AC1);
-                }
-                else if(args[i+1].equals("ac3")){
-                    result=S.solve_ac(Solver.SOLUTIONS_ac.AC3);
-                }
-                else if(args[i+1].equals("ac2001")){
-                    result=S.solve_ac(Solver.SOLUTIONS_ac.AC2001);
-                }
-
-                //Output
-                System.out.println(result);
-                if(needWrite) result.writeToFile("solver_output.csv");
-            }
             else if(args[i].equals("-s")){
                 for(int k=0;k<args.length;k++){
                     if(args[k].equals("-u")){
-                        if(args[k+1].equals("LX")){
-                            heuristicType= heuristicType.LX;
-                        }
-                        else if(args[k+1].equals("LD")){
-                            heuristicType= heuristicType.LD;
-                        }
-                        else if(args[k+1].equals("DEG")){
-                            heuristicType= heuristicType.DEG;
-                        }
-                        else if(args[k+1].equals("DD")){
-                            heuristicType= heuristicType.DD;
-                        }
-                        else if(args[k+1].equals("MWO")){
-                            heuristicType= heuristicType.MWO;
-                        }
-                        else if(args[k+1].equals("dLD")){
-                            heuristicType= heuristicType.dLD;
-                        }
-                        else if(args[k+1].equals("dDEG")){
-                            heuristicType= heuristicType.dDEG;
-                        }
-                        else if(args[k+1].equals("dDD")){
-                            heuristicType= heuristicType.dDD;
-                        }
-                        else if(args[k+1].equals("dDwD")){
-                            heuristicType= heuristicType.dDwD;
-                        }
-                        else{
-                            System.out.println(args[k+1]);
-                            throw new java.lang.UnknownError("Wrong Heuristic Type");
+                        switch (args[k + 1]) {
+                            case "LX":
+                                heuristicType = heuristicType.LX;
+                                break;
+                            case "LD":
+                                heuristicType = heuristicType.LD;
+                                break;
+                            case "DEG":
+                                heuristicType = heuristicType.DEG;
+                                break;
+                            case "DD":
+                                heuristicType = heuristicType.DD;
+                                break;
+                            case "MWO":
+                                heuristicType = heuristicType.MWO;
+                                break;
+                            case "dLD":
+                                heuristicType = heuristicType.dLD;
+                                break;
+                            case "dDEG":
+                                heuristicType = heuristicType.dDEG;
+                                break;
+                            case "dDD":
+                                heuristicType = heuristicType.dDD;
+                                break;
+                            case "dDwD":
+                                heuristicType = heuristicType.dDwD;
+                                break;
+                            default:
+                                System.out.println(args[k + 1]);
+                                throw new UnknownError("Wrong Heuristic Type");
                         }
                         break;
                     }
                 }
-                if(heuristicType==null) heuristicType= heuristicType.LX;
-                Solver S=new Solver();
-                S.init(problem);
-                S.solve_ac(Solver.SOLUTIONS_ac.NC);
-                S.AC_trim();
+                if(heuristicType==null) throw new UnknownError("No Variable Ordering");
+
+
 
                 //solve
                 solverReporter_bt result=null;
-                if(args[i+1].equals("BT")){
-                    problem.BTtype="BT";
-                    result=S.solve_bt(Solver.SOLUTIONS_bt.BT,heuristicType);
+                if(args[i+1].equals("FC")){
+                    Solver S=new Solver();
+                    S.init(problem);
+                    S.solve_ac(Solver.SOLUTIONS_ac.NC);
+                    S.AC_trim();
+                    problem.BTtype = "FC";
+                    result = S.solve_bt(Solver.SOLUTIONS_bt.FC, heuristicType);
                     System.out.print(result);
-                    if(needWrite){
-                        result.writeToFile("solver_output.csv");
-                        result.writeToFileOrder("solver_output_ord.csv");
-                    }
-
-                }
-                else if (args[i+1].equals("CBJ")){
-                    problem.BTtype="CBJ";
-                    result=S.solve_bt(Solver.SOLUTIONS_bt.CBJ,heuristicType);
-                    System.out.print(result);
-                    if(needWrite){
-                        result.writeToFile("solver_output.csv");
-                        result.writeToFileOrder("solver_output_ord.csv");
-                    }
-                }
-                else if (args[i+1].equals("FC")){
-                    problem.BTtype="FC";
-                    result=S.solve_bt(Solver.SOLUTIONS_bt.FC,heuristicType);
-                    System.out.print(result);
-                    if(needWrite){
-                        result.writeToFile("solver_output.csv");
-                        result.writeToFileOrder("solver_output_ord.csv");
-                    }
-                }
-                else if (args[i+1].equals("FCCBJ")){
-                    problem.BTtype="FCCBJ";
-                    result=S.solve_bt(Solver.SOLUTIONS_bt.FCCBJ,heuristicType);
-                    System.out.print(result);
-                    if(needWrite){
+                    if (needWrite) {
                         result.writeToFile("solver_output.csv");
                         result.writeToFileOrder("solver_output_ord.csv");
                     }
                 }
                 else if(args[i+1].equals("MAC")){
-                    problem.BTtype="MAC";
-                    result=S.solve_bt(Solver.SOLUTIONS_bt.MAC,heuristicType);
+                    Solver_MAC S=new Solver_MAC();
+                    S.init(problem);
+                    S.solve_ac(Solver.SOLUTIONS_ac.NC);
+                    S.AC_trim();
+                    problem.BTtype = "MAC";
+                    result = S.solve_bt(Solver.SOLUTIONS_bt.MAC, heuristicType);
                     System.out.print(result);
-                    if(needWrite){
+                    if (needWrite) {
                         result.writeToFile("solver_output.csv");
                         result.writeToFileOrder("solver_output_ord.csv");
                     }
                 }
                 else{
                     System.out.println("Wrong Parameter of '-s'");
+                    throw new UnknownError("");
                 }
             }
         }
         if(!validArg){
             //Default
-            parser = new MyParser("./zebra.xml");
+            parser = new MyParser("./tightness5.xml");
             file_name="data";
             Solver S=new Solver();
             S.init(problem);
             S.solve_ac(Solver.SOLUTIONS_ac.NC);
             S.AC_trim();
             problem.BTtype="MAC";
-            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.MAC, variableChooser.heuristicType.dDwD);
+            solverReporter_bt result=S.solve_bt(Solver.SOLUTIONS_bt.FC, variableChooser.heuristicType.dDD);
             result.writeToFile("solver_output.csv");
             result.writeToFileOrder("solver_output_ord.csv");
             System.out.println(result);

@@ -1,13 +1,15 @@
 package csp.tool.bt;
 
 import csp.data.Constraint;
+import csp.data.Variable;
 import csp.data.simpleVariable;
-import csp.tool.Solver;
 import csp.tool.relatedJudge;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class dynamicVariableChooser extends variableChooser{
+    private List<simpleVariable> unusedMemory = null;
 
     public dynamicVariableChooser(List<simpleVariable> orgLi, heuristicType mode, relatedJudge isRelated) {
         super(orgLi,mode,isRelated);
@@ -48,7 +50,7 @@ public class dynamicVariableChooser extends variableChooser{
             return getDegreeOrder2s(unused);
         }
         else if (mode==heuristicType.dDwD){
-            return getDegreeOrder2plusX(unused);
+            return getDegreeOrderDwD(unused);
         }
         else{
             throw new java.lang.UnknownError("UNKNOWN DYNAMIC HEURISTIC TYPE");
@@ -58,11 +60,15 @@ public class dynamicVariableChooser extends variableChooser{
     @Override
     public List<simpleVariable> getUnusedVariables(int pos){
         if(pos!=count&&pos!=-233) throw new java.lang.UnknownError("WRONG INDEX");
+
+        if (unusedMemory!=null) return unusedMemory;
         ArrayList<simpleVariable> pool=new ArrayList<>();
         for(simpleVariable i:refOrg){
             if(usedFlags.get(i)==null) throw new java.lang.UnknownError("UNKNOWN");
             if(usedFlags.get(i)==false) pool.add(i);
         }
+        unusedMemory = pool;
+        // the returned value should not be changed
         return pool;
     }
 
@@ -139,42 +145,40 @@ public class dynamicVariableChooser extends variableChooser{
         return list.get(least_index);
     }
 
-    private simpleVariable getDegreeOrder2plusX(List<simpleVariable> list) {
+    static private simpleVariable getDegreeOrderDwD(List<simpleVariable> unused) {
         // Initialize
-        int[] degreeCounts = new int[list.size()];
         ArrayList<simpleVariable> l = new ArrayList<>();
-        for (simpleVariable x : list) l.add(x);
-        l.forEach(i -> i.deg = 0);
-
+        for (simpleVariable x : unused) l.add(x);
 
         // Count weight-degrees
-        for(simpleVariable i: list){
+        List<Variable> unusedVariableList = unused.stream().map(simpleVariable::getRefVar).distinct().collect(Collectors.toList());
+        for(simpleVariable i: unused){
             int sum=0;
-            for(Constraint j: i.getRefVar().constraints){
-                if(j.getArity()!=2) continue;
-                boolean flag= Solver.constraintInSimpleVariableList(j,getUnusedVariables(-233));
-                if(!flag) {
-//                    System.out.println("YES");
+            for(Constraint con: i.getRefVar().constraints){
+                if(con.getArity()!=2) continue;
+                boolean inRange= unusedVariableList.contains(con.scope[0]) && unusedVariableList.contains(con.scope[1]);
+                if(!inRange) {
                     continue;
                 }
-                sum+=j.wdeg;
+                sum+=con.wdeg;
             }
             i.deg=sum;
         }
 
         // Select the variable has smallest 'dom/wdeg'
-        int least_index=0;
-        for(int i=1;i<list.size();i++){
-            double len_i = list.get(i).getCurrent_domain().size()*1.0/degreeCounts[i];
-            double len_least = list.get(least_index).getCurrent_domain().size()*1.0/degreeCounts[least_index];
-            if(len_i==len_least&&list.get(i).getName().compareTo(list.get(least_index).getName())<0){
-                least_index=i;
+        simpleVariable least_variable=unused.get(0);
+
+        for(simpleVariable i:unused){
+            double len_i = i.getCurrent_domain().size()*1.0/i.deg;
+            double len_least = least_variable.getCurrent_domain().size()*1.0/least_variable.deg;
+            if(len_i==len_least&&i.getName().compareTo(least_variable.getName())<0){
+                least_variable=i;
             }
             else if(len_i<len_least){
-                least_index=i;
+                least_variable=i;
             }
         }
-        return list.get(least_index);
+        return least_variable;
     }
 
     private simpleVariable dLD(){
@@ -202,6 +206,7 @@ public class dynamicVariableChooser extends variableChooser{
     // Choose next variable and add it to the list
     @Override
     public void next(){
+        unusedMemory = null;
         count++;
         if(getPos()+1>refOrg.size()){
             throw new java.lang.UnknownError("POS EXCEED LIMIT");
@@ -214,6 +219,7 @@ public class dynamicVariableChooser extends variableChooser{
     // Discard the last variable
     @Override
     public void back(){
+        unusedMemory = null;
         count--;
         usedFlags.replace(((LinkedList<simpleVariable>)li).getLast(),false);
         ((LinkedList<simpleVariable>)li).removeLast();

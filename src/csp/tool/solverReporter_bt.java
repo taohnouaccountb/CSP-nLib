@@ -120,18 +120,18 @@ public class solverReporter_bt {
     }
 
     public void writeToFileOrder(String addr) {
-        try {
-            Writer writer = new FileWriter(addr, true);
-            String line = "";
-            line += file_name + ", " + variable_order_heuristic;
-            for (simpleVariable i : chooser.li) {
-                line += ", " + i.getName();
-            }
-            writer.write(line + "\n");
-            writer.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            Writer writer = new FileWriter(addr, true);
+//            String line = "";
+//            line += file_name + ", " + variable_order_heuristic;
+//            for (simpleVariable i : chooser.li) {
+//                line += ", " + i.getName();
+//            }
+//            writer.write(line + "\n");
+//            writer.close();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
     @Override
