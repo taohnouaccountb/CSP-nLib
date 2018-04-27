@@ -11,6 +11,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
+import static csp.io.random.randint;
+
 public class PartialAC3 {
     private List<simpleVariable> target_list;
 
@@ -59,12 +61,21 @@ public class PartialAC3 {
     }
 
     private boolean support(final simpleVariable a, final int va, final simpleVariable b) {
-        return b.getCurrent_domain().stream().anyMatch(i -> check(a, va, b, i));
+
+        for(int i:b.getCurrent_domain()){
+            if(check(a,va,b,i)){
+                return true;
+            }
+        }
+        return false;
+//        return b.getCurrent_domain().stream().anyMatch(i -> check(a, va, b, i));
     }
 
     private boolean revise(final simpleVariable a, final simpleVariable b) throws NoSolutionException {
         assert(a.getRefVar().neighbors.contains(b.getRefVar()));
+
         List<Boolean> rst_flag = a.getCurrent_domain().stream().map(va -> support(a, va, b)).collect(Collectors.toList());
+
         boolean needReduceDomain = rst_flag.contains(false);
         if(!rst_flag.contains(true)){
             //No solution
@@ -110,15 +121,20 @@ public class PartialAC3 {
         boolean findWipeout = false;
 
         target_list.forEach(i->i.reductionMAC.push(new ArrayList<>()));
-        Queue<solverSimpleVarPair> q = getInitQueue_queue();
+
+//        Queue<solverSimpleVarPair> q = getInitQueue_queue();
+        List<solverSimpleVarPair> setq = new LinkedList<>(getInitQueue_queue());
+
 //        for (solverSimpleVarPair i : q) {
 //            for (int j = 0; j <= ith; j++) {
 //                assert i.getA() != chooser.get(j) && i.getB() != chooser.get(j);
 //            }
 //        }
-        while (q.size() != 0) {
+        while (setq.size() != 0) {
             boolean isRevised;
-            solverSimpleVarPair i = q.poll();
+            int indexOfChoice=randint(setq.size());
+            solverSimpleVarPair i = setq.get(indexOfChoice);
+            setq.remove(indexOfChoice);
             simpleVariable target = i.getA();
             simpleVariable compare = i.getB();
             try {
@@ -137,7 +153,7 @@ public class PartialAC3 {
                         .distinct()
                         .forEach((j) -> {
                             solverSimpleVarPair x=new solverSimpleVarPair(j, target);
-                            if(!q.contains(x)) q.offer(x);
+                            if(!setq.contains(x)) setq.add(x);
                         });
             }
         }

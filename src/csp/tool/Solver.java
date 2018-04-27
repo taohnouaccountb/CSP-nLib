@@ -307,7 +307,10 @@ public class Solver {
                         .map(j -> findSimpleVariable.get(j))
                         .distinct()
                         .forEach((j) -> {
-                            q.offer(new solverSimpleVarPair(j, i.getA()));
+                            solverSimpleVarPair x = new solverSimpleVarPair(j, i.getA());
+                            if(!q.contains(x)){
+                                q.offer(x);
+                            }
                         });
             }
         }
@@ -366,6 +369,7 @@ public class Solver {
 
     private void FC(heuristicType mode) {
         boolean oneSolution = true;
+        System.out.println("ONE SOLUTION: "+oneSolution);
         if (mode.name().startsWith("d")) {
             variables.forEach(simpleVariable::initFC);
             chooser = new dynamicVariableChooser(variables, mode, isRelated);

@@ -142,6 +142,8 @@ public class MyParser {
                     S.init(problem);
                     S.solve_ac(Solver.SOLUTIONS_ac.NC);
                     S.AC_trim();
+                    S.solve_ac(Solver.SOLUTIONS_ac.AC3);
+                    S.AC_trim();
                     problem.BTtype = "FC";
                     result = S.solve_bt(Solver.SOLUTIONS_bt.FC, heuristicType);
                     System.out.print(result);

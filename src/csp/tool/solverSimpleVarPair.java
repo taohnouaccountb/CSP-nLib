@@ -44,7 +44,7 @@ public class solverSimpleVarPair{
 
     @Override
     public int hashCode(){
-        throw new UnknownError("Should not be reached");
-//        return (int)(((long)a.hashCode()+b.hashCode())%10000000);
+//        throw new UnknownError("Should not be reached");
+        return (int)(((long)a.hashCode()+b.hashCode())%10000000);
     }
 }
