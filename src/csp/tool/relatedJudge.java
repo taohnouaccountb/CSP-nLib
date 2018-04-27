@@ -1,18 +1,20 @@
 package csp.tool;
 
+import com.sun.org.apache.xpath.internal.operations.Bool;
 import csp.data.simpleVariable;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class relatedJudge {
-    private Set<solverSimpleVarPair> relatedMark = null;
-    public relatedJudge(Stream<solverSimpleVarPair> ss){
-        relatedMark = ss.collect(Collectors.toSet());
+    private Map<simpleVariable, Map<simpleVariable, Boolean> > relatedMark = null;
+    public relatedJudge(){
+        //TODO improve performance
     }
 
     public boolean isExist(simpleVariable a, simpleVariable b){
-        return relatedMark.contains(new solverSimpleVarPair(a,b));
+        return a.getRefVar().neighbors.contains(b.getRefVar());
     }
 }

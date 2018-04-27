@@ -20,11 +20,11 @@ public class PartialAC3 {
 
     private Constraint reasonOfLastCheckFailed;
     private boolean check(simpleVariable a, int va, simpleVariable b, int vb) {
-        Solver.check_counts++;
         reasonOfLastCheckFailed=null;
+        if(!a.getRefVar().neighbors.contains(b.getRefVar())) return true; // No relation, no check needed
 
-        if(!a.getRefVar().neighbors.contains(b.getRefVar())) return true;
-
+        Solver.check_counts++;
+        if (Solver.check_counts%10000==0) System.out.println(Solver.check_counts);
         List<Constraint> constraints = Solver.constraintsBetween(a,b);
 
         for(Constraint i:constraints){
@@ -63,6 +63,7 @@ public class PartialAC3 {
     }
 
     private boolean revise(final simpleVariable a, final simpleVariable b) throws NoSolutionException {
+        assert(a.getRefVar().neighbors.contains(b.getRefVar()));
         List<Boolean> rst_flag = a.getCurrent_domain().stream().map(va -> support(a, va, b)).collect(Collectors.toList());
         boolean needReduceDomain = rst_flag.contains(false);
         if(!rst_flag.contains(true)){
@@ -127,7 +128,7 @@ public class PartialAC3 {
                 break;
             }
             if (isRevised) {
-                i.getA().getRefVar().constraints.parallelStream()
+                target.getRefVar().constraints.stream()
                         .filter(j -> j.getArity() == 2)
                         .flatMap(j -> Arrays.stream(j.scope))
                         .filter(j -> !target.equals_VAR(j) && !compare.equals_VAR(j))
@@ -135,7 +136,8 @@ public class PartialAC3 {
                         .filter(target_list::contains)
                         .distinct()
                         .forEach((j) -> {
-                            q.offer(new solverSimpleVarPair(j, i.getA()));
+                            solverSimpleVarPair x=new solverSimpleVarPair(j, target);
+                            if(!q.contains(x)) q.offer(x);
                         });
             }
         }

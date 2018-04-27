@@ -9,7 +9,7 @@ import java.util.*;
 import java.util.stream.Stream;
 
 public class Solver_MAC extends Solver {
-    private boolean oneSolution = false;
+    private boolean oneSolution = true;
 
     private relatedJudge isRelated;
     private dynamicVariableChooser chooser;
@@ -19,13 +19,12 @@ public class Solver_MAC extends Solver {
 
     private void init(variableChooser.heuristicType var_heuristic){
         if(oneSolution) System.out.println("ONE SOLUTION: ON");
-        isRelated = new relatedJudge(getInitQueue_stream(variables));
+        isRelated = new relatedJudge();
 
         chooser = new dynamicVariableChooser(variables, var_heuristic, isRelated);
 
         var_num = chooser.getSize();
         v = new int[var_num];
-
 
         variables.forEach(simpleVariable::initFC);
         search_solutions = new ArrayList<>();
@@ -119,8 +118,6 @@ public class Solver_MAC extends Solver {
                 chooser.get(ith - 1).getCurrent_domain().removeFirst();
                 consistent = !chooser.get(ith - 1).getCurrent_domain().isEmpty();
 
-//                chooser.back();
-
                 ith--;
             }
         }
@@ -132,10 +129,12 @@ public class Solver_MAC extends Solver {
                     //Double the pairs
                     simpleVariable a = findSimpleVariable.get(i.scope[0]);
                     simpleVariable b = findSimpleVariable.get(i.scope[1]);
-                    if (!target_list.contains(a) || !target_list.contains(b)) {
+                    if (target_list.contains(a) && target_list.contains(b)) {
+                        return Stream.of(new solverSimpleVarPair(a, b), new solverSimpleVarPair(b, a));
+                    }
+                    else{
                         return Stream.of();
                     }
-                    return Stream.of(new solverSimpleVarPair(a, b), new solverSimpleVarPair(b, a));
-                }).distinct();
+                });
     }
 }

@@ -1,8 +1,9 @@
 package csp.tool;
 
+import com.sun.org.apache.bcel.internal.classfile.Unknown;
 import csp.data.simpleVariable;
 
-public class solverSimpleVarPair implements Comparable{
+public class solverSimpleVarPair{
     private simpleVariable a=null;
     private simpleVariable b=null;
     public solverSimpleVarPair(simpleVariable a, simpleVariable b){
@@ -29,20 +30,21 @@ public class solverSimpleVarPair implements Comparable{
         return b;
     }
 
-    @Override
-    public int compareTo(Object o) {
-        solverSimpleVarPair t=(solverSimpleVarPair) o;
-        int ca=a.getName().compareTo(t.a.getName());
-        if(ca!=0){
-            return ca;
-        }
-        else{
-            return b.getName().compareTo(t.b.getName());
-        }
-    }
+//    @Override
+//    public int compareTo(Object o) {
+//        solverSimpleVarPair t=(solverSimpleVarPair) o;
+//        int ca=a.getName().compareTo(t.a.getName());
+//        if(ca!=0){
+//            return ca;
+//        }
+//        else{
+//            return b.getName().compareTo(t.b.getName());
+//        }
+//    }
 
     @Override
     public int hashCode(){
-        return (int)(((long)a.hashCode()+b.hashCode())%10000000);
+        throw new UnknownError("Should not be reached");
+//        return (int)(((long)a.hashCode()+b.hashCode())%10000000);
     }
 }

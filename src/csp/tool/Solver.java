@@ -300,7 +300,7 @@ public class Solver {
             solverSimpleVarPair i = q.poll();
             isRevised = revise(i.getA(), i.getB());
             if (isRevised) {
-                i.getA().getRefVar().constraints.parallelStream()
+                i.getA().getRefVar().constraints.stream()
                         .filter(j -> j.getArity() == 2)
                         .flatMap(j -> Arrays.stream(j.scope))
                         .filter(j -> !j.getName().equals(i.getA().getName()) && !j.getName().equals(i.getB().getName()))
@@ -336,7 +336,7 @@ public class Solver {
         bt = 0;
         long startTime = System.nanoTime();
 
-        isRelated = new relatedJudge(getInitQueue_stream());
+        isRelated = new relatedJudge();
 
         if (problem == null) {
             System.out.println("ERROR: Problem Uninitialized");
@@ -365,7 +365,7 @@ public class Solver {
     }
 
     private void FC(heuristicType mode) {
-        boolean oneSolution = false;
+        boolean oneSolution = true;
         if (mode.name().startsWith("d")) {
             variables.forEach(simpleVariable::initFC);
             chooser = new dynamicVariableChooser(variables, mode, isRelated);
@@ -394,7 +394,6 @@ public class Solver {
                     List<simpleVariable> unused = chooser.getUnusedVariables(ith);
                     for (int k = 0; !findWipeout && k < unused.size(); k++) {
                         simpleVariable curr = unused.get(k);
-                        int X=curr.getCurrent_domain().getLast();
                         if (isRelated.isExist(cur, curr)) {
                             //check-foward
                             Set<Integer> new_reduction = new TreeSet<>();
@@ -469,10 +468,11 @@ public class Solver {
                     }
                 }*/
 
-                chooser.get(ith - 1).getCurrent_domain().remove(Integer.valueOf(v[ith - 1]));
+                chooser.get(ith - 1).getCurrent_domain().removeFirst();
+//                chooser.get(ith - 1).getCurrent_domain().remove(Integer.valueOf(v[ith - 1]));
                 consistent = !chooser.get(ith - 1).getCurrent_domain().isEmpty();
                 ith--;
-                chooser.back();
+//                chooser.back();
 
                 if (oneSolution) break;
             }
